@@ -1,9 +1,9 @@
 {
   "name": "@xiguawang/skill-doctor",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "bin": {
-    "skill-doctor": "./lib/skill-doctor.js",
-    "skill-doctor-scan": "./lib/skill-doctor-scan.js"
+    "skill-doctor": "lib/skill-doctor.js",
+    "skill-doctor-scan": "lib/skill-doctor-scan.js"
   },
   "files": [
     "dist",
