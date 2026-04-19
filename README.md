@@ -1,17 +1,60 @@
+<div align="center">
+
 # Skill Doctor
+
+**Audit coding-agent skills like infrastructure, not hidden prompt glue.**
 
 [中文文档](./README.zh-CN.md)
 
-Skill Doctor is a local-first inspector for coding-agent skills. It helps you understand what skills are installed, which one wins when multiple definitions overlap, where risky behavior lives, and how a workspace behaves across project, global, and system scopes.
+<p>
+  <img alt="npm" src="https://img.shields.io/badge/npm-package-161b22?style=for-the-badge&logo=npm&logoColor=white">
+  <img alt="react" src="https://img.shields.io/badge/react-ui-161b22?style=for-the-badge&logo=react&logoColor=61dafb">
+  <img alt="typescript" src="https://img.shields.io/badge/typescript-core-161b22?style=for-the-badge&logo=typescript&logoColor=3178c6">
+  <img alt="local first" src="https://img.shields.io/badge/local--first-workflow-161b22?style=for-the-badge">
+  <img alt="bilingual" src="https://img.shields.io/badge/i18n-en%20%7C%20zh--CN-161b22?style=for-the-badge">
+</p>
+
+<p>
+  Skill Doctor is a local-first inspector for coding-agent skills. It shows what is installed,
+  which definition wins, where risk accumulates, and how a workspace behaves across project,
+  global, and system scopes.
+</p>
+
+</div>
+
+> Skill Doctor makes local skill systems legible. It turns hidden prompt behavior into something you can inspect, compare, and reason about before it surprises you.
+
+## Navigate
+
+- [Highlights](#highlights)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [CLI](#cli)
+- [What It Detects](#what-it-detects)
+- [Model Analysis](#model-analysis)
+- [Architecture](#architecture)
+- [Development](#development)
 
 ## Highlights
 
-- Scans Codex, Claude, Cursor, Copilot, GitHub, and generic skill roots
-- Detects precedence chains, overrides, trigger overlaps, and duplicate capabilities
-- Flags risky shell, network, subprocess, secret, and destructive patterns
-- Stores snapshots and config globally in `~/.skill-doctor/`
-- Provides a local React UI with history, filtering, deletion, and model-assisted analysis
-- Supports English and Simplified Chinese in the UI
+| Inspect | Explain | Operate |
+| --- | --- | --- |
+| Scans Codex, Claude, Cursor, Copilot, GitHub, and generic skill roots | Shows precedence chains, overrides, duplicate names, and trigger overlap | Stores snapshots and config globally in `~/.skill-doctor/` |
+| Flags shell, network, subprocess, secret, and destructive patterns | Adds model-assisted findings on top of local static analysis | Provides a local React UI with history, filtering, deletion, and bilingual support |
+
+## At A Glance
+
+```text
+scan local skill roots
+        ->
+derive precedence, conflicts, and risk signals
+        ->
+build a structured model-analysis payload
+        ->
+store immutable snapshots globally
+        ->
+inspect everything in a local React UI
+```
 
 ## Why Skill Doctor
 
@@ -25,6 +68,12 @@ As local and project-level agent skills grow, it becomes difficult to answer sim
 Skill Doctor treats skills as inspectable infrastructure instead of hidden behavior.
 
 ## Installation
+
+### One-line app launch
+
+```bash
+npx skill-doctor
+```
 
 ### Use as an npm package
 
@@ -79,6 +128,16 @@ skill-doctor-scan --project /path/to/project
 ```bash
 skill-doctor-scan --project /path/to/project --markdown ./skill-report.md
 ```
+
+## Product Surface
+
+| Surface | Purpose |
+| --- | --- |
+| `skill-doctor` | Starts the local UI for the current project context |
+| `skill-doctor --scan` | Starts the UI and performs an initial scan |
+| `skill-doctor-scan` | Runs scans without starting the UI |
+| React dashboard | History, settings, roots, analysis, and skill inspection |
+| Global storage | Config and immutable snapshots outside the target project |
 
 ## CLI
 
