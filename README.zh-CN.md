@@ -38,7 +38,7 @@
 
 | 看见什么 | 解释什么 | 如何使用 |
 | --- | --- | --- |
-| 扫描 Codex、Claude、Cursor、Copilot、GitHub 和通用 skill 根目录 | 展示优先级链路、override、重复名称和 trigger 重叠 | 将快照和配置统一存到 `~/.skill-doctor/` |
+| 扫描 OpenClaw、Codex、Claude、Cursor、Copilot、GitHub 和通用 skill 根目录 | 展示优先级链路、override、重复名称和 trigger 重叠 | 将快照和配置统一存到 `~/.skill-doctor/` |
 | 标记 shell、网络、子进程、secret、破坏性命令等风险模式 | 在本地静态分析之上叠加模型分析结论 | 提供本地 React UI，支持历史、筛选、删除和双语界面 |
 
 ## 一眼看懂
@@ -90,6 +90,7 @@ npx skill-doctor
 默认情况下，`skill-doctor` 会：
 
 - 使用当前工作目录作为默认项目上下文
+- 将本地服务绑定到 `127.0.0.1`
 - 在 `http://localhost:4173` 启动本地 UI
 - 尝试自动打开浏览器
 - 不自动执行扫描，除非你在 UI 里手动触发，或者启动时加 `--scan`
@@ -155,6 +156,7 @@ skill-doctor
 skill-doctor --scan
 skill-doctor --project /path/to/project
 skill-doctor --no-open
+skill-doctor --host 0.0.0.0
 ```
 
 ### `skill-doctor-scan`
@@ -177,12 +179,16 @@ skill-doctor-scan --project . --analysis-language zh-CN
 ## 可检测内容
 
 - 项目级、全局级、系统级已安装 skill
+- OpenClaw 标准目录，包括 `<workspace>/skills`、`<workspace>/.agents/skills`、`~/.agents/skills` 和 `~/.openclaw/skills`
+- 如果存在 `~/.openclaw/openclaw.json`，会自动导入其中的 `skills.load.extraDirs`
 - 根目录发现方式与置信度
 - 优先级链与可能胜出的定义
 - 归一化后的重复 skill 名称
 - trigger 重叠与歧义激活
 - skill 文件中的本地静态风险模式
 - 缺失或薄弱元数据，例如没有 trigger phrase
+
+对 OpenClaw 来说，Skill Doctor 现在会发现上述标准目录，并在存在 `~/.openclaw/openclaw.json` 时自动导入 `skills.load.extraDirs`。现有的 `extraRoots` 仍然可以作为自定义或非标准路径的补充。当前仍不会建模 OpenClaw 安装时自带的 bundled skills。
 
 ## 截图说明
 
@@ -208,6 +214,7 @@ skill-doctor-scan --project . --analysis-language zh-CN
 关键点：
 
 - 在 UI 中配置 `apiKey`、`baseUrl` 和 `model`
+- UI 不会回读完整已保存 API key，只显示是否已配置和脱敏提示
 - 本地扫描器会先对 skill 做优先级排序，再交给模型
 - UI 触发的扫描会要求模型按当前界面语言返回
 - CLI 默认英文，可通过 `--analysis-language zh-CN` 切换中文
@@ -288,14 +295,72 @@ React UI
 
 内置发现逻辑当前覆盖这些常见工具的项目级和全局级目录：
 
+- OpenClaw
 - Codex
 - Claude
 - Cursor
 - Copilot
 - GitHub
-- 通用隐藏 agent 目录布局
 
 如果你的环境使用自定义路径，也可以在设置中补充额外的绝对扫描目录。
+
+## OpenClaw 支持
+
+Skill Doctor 现在支持对 OpenClaw 的轻量接入。
+
+当前覆盖的 OpenClaw 目录：
+
+- `<workspace>/skills`
+- `<workspace>/.agents/skills`
+- `~/.agents/skills`
+- `~/.openclaw/skills`
+- 自动从 `~/.openclaw/openclaw.json` 导入 `skills.load.extraDirs`
+
+当前 OpenClaw 支持范围：
+
+- 扫描 OpenClaw 的 workspace、project agent、personal agent、managed 和 config extra roots
+- 按这些目录的常见优先级链展示 override 和 precedence
+- 在同一套 UI 里展示冲突、风险、优先级链和 skill 详情
+- 暂时还不会建模 OpenClaw 安装包自带的 bundled skills
+
+在 OpenClaw 工作区里最快的使用方式：
+
+```bash
+npx skill-doctor --scan
+```
+
+如果你只想输出扫描结果文件：
+
+```bash
+npx skill-doctor-scan --project . --output ./skill-doctor-openclaw-scan.json
+```
+
+## OpenClaw 一键接入 Prompt
+
+下面这段 prompt 可以直接复制给 OpenClaw，让它在当前工作区里完成 Skill Doctor 的轻量接入：
+
+```text
+请把 Skill Doctor 轻量接入到当前 OpenClaw 工作区。
+
+要求：
+1. 把当前目录当作目标 workspace。
+2. 除非绝对必要，不要修改现有 OpenClaw skills。
+3. 把 Skill Doctor 当作外部检查器使用，不要替换当前 skill 目录结构。
+4. 优先尝试一条命令完成接入：`npx skill-doctor --scan`。
+5. 如果更适合只输出扫描产物，则执行 `npx skill-doctor-scan --project . --output ./skill-doctor-openclaw-scan.json`。
+6. 保留当前 OpenClaw 的 `skills.load.extraDirs` 行为。
+7. 完成后请总结：
+   - 检测到了哪些 OpenClaw roots
+   - 每条优先级链里最终哪个 skill 胜出
+   - 有哪些高风险 skill 或 trigger 冲突
+   - 后续复跑检查的准确命令
+
+约束：
+- 保持 local-first。
+- 不要增加不必要的依赖。
+- 不要重写仓库结构。
+- 如果模型分析配置缺失，也要先完成本地扫描，并说明模型分析为何跳过或失败。
+```
 
 ## Demo 工作区
 
@@ -312,11 +377,18 @@ examples/demo-workspace/
 - 高风险和中风险本地模式
 - 元数据缺失问题
 - 模型分析前的本地优先级排序
+- OpenClaw 在 workspace、project agent、personal agent、managed local、config extra roots 之间的优先级
 
 运行方式：
 
 ```bash
 npm run scan:demo
+```
+
+OpenClaw 专项验证可以运行：
+
+```bash
+npm run scan:demo:openclaw
 ```
 
 ## 开发

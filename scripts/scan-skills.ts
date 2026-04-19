@@ -105,6 +105,6 @@ function printHelp(): void {
     'Skill Doctor Scan',
     '',
     'Usage:',
-    '  skill-doctor-scan [--project <path>] [--output <file>] [--markdown <file>] [--analysis-language <en|zh-CN>] [--app-home <path>]',
+    '  skill-doctor-scan [--project <path>] [--home <path>] [--output <file>] [--markdown <file>] [--analysis-language <en|zh-CN>] [--app-home <path>]',
   ].join('\n'));
 }

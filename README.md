@@ -39,7 +39,7 @@
 
 | Inspect | Explain | Operate |
 | --- | --- | --- |
-| Scans Codex, Claude, Cursor, Copilot, GitHub, and generic skill roots | Shows precedence chains, overrides, duplicate names, and trigger overlap | Stores snapshots and config globally in `~/.skill-doctor/` |
+| Scans OpenClaw, Codex, Claude, Cursor, Copilot, GitHub, and generic skill roots | Shows precedence chains, overrides, duplicate names, and trigger overlap | Stores snapshots and config globally in `~/.skill-doctor/` |
 | Flags shell, network, subprocess, secret, and destructive patterns | Adds model-assisted findings on top of local static analysis | Provides a local React UI with history, filtering, deletion, and bilingual support |
 
 ## At A Glance
@@ -91,6 +91,7 @@ npx skill-doctor
 By default, `skill-doctor`:
 
 - uses the current working directory as the default project context
+- binds the local server to `127.0.0.1`
 - starts the local UI on `http://localhost:4173`
 - attempts to open the browser
 - does not run a scan until you trigger one in the UI or pass `--scan`
@@ -156,6 +157,7 @@ skill-doctor
 skill-doctor --scan
 skill-doctor --project /path/to/project
 skill-doctor --no-open
+skill-doctor --host 0.0.0.0
 ```
 
 ### `skill-doctor-scan`
@@ -178,12 +180,16 @@ skill-doctor-scan --project . --analysis-language zh-CN
 ## What It Detects
 
 - Installed skills across project, global, and system scopes
+- Standard OpenClaw roots including `<workspace>/skills`, `<workspace>/.agents/skills`, `~/.agents/skills`, and `~/.openclaw/skills`
+- OpenClaw `skills.load.extraDirs` imported automatically from `~/.openclaw/openclaw.json` when present
 - Root discovery confidence and discovery method
 - Precedence chains and likely winners
 - Duplicate normalized skill names
 - Trigger overlaps and ambiguous activations
 - Static local risk patterns in skill files
 - Missing or weak metadata such as absent trigger phrases
+
+For OpenClaw, Skill Doctor now discovers the standard roots above and also imports `skills.load.extraDirs` from `~/.openclaw/openclaw.json` when that file is present. Manual `extraRoots` still work as an override for custom or non-standard layouts. Bundled OpenClaw install-time skills are not modeled yet.
 
 ## Screenshots
 
@@ -209,6 +215,7 @@ The flow is:
 Important details:
 
 - Configure `apiKey`, `baseUrl`, and `model` in the UI
+- The UI does not read back the full stored API key; it only shows configured state and a masked hint
 - The local scanner ranks skills before sending them to the model
 - UI-triggered scans request model output in the current UI language
 - CLI scans default to English and support `--analysis-language zh-CN`
@@ -289,14 +296,72 @@ React UI
 
 Built-in discovery currently covers common project and global roots for:
 
+- OpenClaw
 - Codex
 - Claude
 - Cursor
 - Copilot
 - GitHub
-- generic hidden-agent layouts
 
 You can also define extra absolute scan roots in settings when your environment uses custom paths.
+
+## OpenClaw Support
+
+Skill Doctor supports lightweight OpenClaw integration out of the box.
+
+Covered OpenClaw roots:
+
+- `<workspace>/skills`
+- `<workspace>/.agents/skills`
+- `~/.agents/skills`
+- `~/.openclaw/skills`
+- `skills.load.extraDirs` imported automatically from `~/.openclaw/openclaw.json`
+
+Current OpenClaw coverage:
+
+- scans OpenClaw workspace, project-agent, personal-agent, managed, and config-driven extra skill roots
+- models the common precedence chain across those roots
+- shows conflicts, override chains, risks, and skill details in the same UI as other agent ecosystems
+- does not yet model bundled OpenClaw install-time skills
+
+Fastest way to use it from an OpenClaw workspace:
+
+```bash
+npx skill-doctor --scan
+```
+
+Or scan only and keep the output local:
+
+```bash
+npx skill-doctor-scan --project . --output ./skill-doctor-openclaw-scan.json
+```
+
+## OpenClaw Onboarding Prompt
+
+Copy this prompt into OpenClaw when you want a lightweight Skill Doctor integration in the current workspace:
+
+```text
+Integrate Skill Doctor into the current OpenClaw workspace with the lightest possible setup.
+
+Requirements:
+1. Treat the current directory as the target workspace.
+2. Do not modify existing OpenClaw skills unless absolutely necessary.
+3. Use Skill Doctor as an external inspector, not as a replacement for the current skill layout.
+4. Prefer one-command usage first: `npx skill-doctor --scan`.
+5. If a scan-only artifact is more appropriate, run `npx skill-doctor-scan --project . --output ./skill-doctor-openclaw-scan.json`.
+6. Preserve any existing OpenClaw `skills.load.extraDirs` behavior.
+7. After setup, summarize:
+   - which OpenClaw roots were detected
+   - which skill copy wins in each precedence chain
+   - any high-risk skills or trigger conflicts
+   - the exact command to rerun the inspection later
+
+Constraints:
+- Keep the integration local-first.
+- Do not add unnecessary dependencies.
+- Do not rewrite the repository structure.
+- If configuration is missing for model analysis, still complete the local scan and report that model analysis was skipped or failed.
+```
 
 ## Demo Workspace
 
@@ -313,11 +378,18 @@ It is useful for testing:
 - high-risk and medium-risk local patterns
 - missing metadata issues
 - local-priority ranking before model analysis
+- OpenClaw precedence across workspace, project agent, personal agent, managed local, and config-driven extra roots
 
 Run it with:
 
 ```bash
 npm run scan:demo
+```
+
+Run the OpenClaw-specific fixture with:
+
+```bash
+npm run scan:demo:openclaw
 ```
 
 ## Development

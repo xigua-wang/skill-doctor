@@ -9,12 +9,13 @@ import { fileURLToPath } from 'node:url';
 import { buildScan } from '../src-core/scanner/scan-engine.ts';
 import { testModelConnection } from '../src-core/analysis/analyze-scan.ts';
 import type { AppConfig, AppLocale } from '../src-core/types.ts';
-import { readConfig, writeConfig } from '../src-core/storage/config-store.ts';
+import { readConfig, sanitizeConfig, writeConfig } from '../src-core/storage/config-store.ts';
 import { deleteScan, listScans, readLatestScan, readScan, saveScan } from '../src-core/storage/scan-store.ts';
 
 const args = parseArgs(process.argv.slice(2));
 const cwd = process.cwd();
 const port = Number(getArg(args, 'port') || process.env.PORT || 4173);
+const host = getArg(args, 'host') || '127.0.0.1';
 const appHome = getArg(args, 'app-home') || process.env.SKILL_DOCTOR_HOME;
 const projectDir = path.resolve(getArg(args, 'project') || cwd);
 const shouldOpen = !hasFlag(args, 'no-open');
@@ -46,10 +47,13 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, () => {
+server.listen(port, host, () => {
   const appUrl = `http://localhost:${port}`;
   console.log(`Skill Doctor server listening on ${appUrl}`);
   console.log(`Project: ${projectDir}`);
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    console.warn(`Warning: server is exposed on host ${host}. Sensitive local APIs are reachable beyond this machine interface.`);
+  }
   if (shouldOpen) {
     openBrowser(appUrl);
   }
@@ -68,24 +72,34 @@ async function handleApi(request: http.IncomingMessage, response: http.ServerRes
     return;
   }
   if (request.method === 'GET' && url.pathname === '/api/config') {
-    sendJson(response, 200, await readConfig(appHome));
+    sendJson(response, 200, sanitizeConfig(await readConfig(appHome)));
     return;
   }
   if (request.method === 'PUT' && url.pathname === '/api/config') {
     const body = await readBody<Partial<AppConfig>>(request);
-    sendJson(response, 200, await writeConfig(body, appHome));
+    sendJson(response, 200, sanitizeConfig(await writeConfig(body, appHome)));
     return;
   }
   if (request.method === 'POST' && url.pathname === '/api/config/test-connection') {
     const body = await readBody<Partial<AppConfig>>(request);
-    const stored = await readConfig(appHome);
-    const merged: AppConfig = {
-      ...stored,
-      ...body,
-      scan: { ...stored.scan, ...(body.scan || {}) },
-      analysis: { ...stored.analysis, ...(body.analysis || {}) },
+    const candidate: AppConfig = {
+      provider: `${body.provider || ''}`.trim(),
+      baseUrl: `${body.baseUrl || ''}`.trim(),
+      model: `${body.model || ''}`.trim(),
+      apiKey: `${body.apiKey || ''}`.trim(),
+      scan: {
+        maxDepth: Number(body.scan?.maxDepth || 5),
+        includeProjectRoots: body.scan?.includeProjectRoots !== false,
+        includeGlobalRoots: body.scan?.includeGlobalRoots !== false,
+        enableFallbackDiscovery: body.scan?.enableFallbackDiscovery !== false,
+        extraRoots: body.scan?.extraRoots || [],
+      },
+      analysis: {
+        timeoutMs: Number(body.analysis?.timeoutMs || 20000),
+        maxSkills: Number(body.analysis?.maxSkills || 12),
+      },
     };
-    sendJson(response, 200, await testModelConnection(merged));
+    sendJson(response, 200, await testModelConnection(candidate));
     return;
   }
   if (request.method === 'GET' && url.pathname === '/api/scans') {
@@ -144,7 +158,7 @@ async function serveStatic(pathname: string, response: http.ServerResponse): Pro
   } catch {
     const indexPath = await resolveIndexPath();
     try {
-      const body = await fs.readFile(indexPath);
+      const body = await fs.readFile(indexPath, 'utf8');
       response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       response.end(body);
       return;
@@ -323,14 +337,16 @@ function printHelp(): void {
     'Skill Doctor',
     '',
     'Usage:',
-    '  skill-doctor [--project <path>] [--port <number>] [--app-home <path>] [--no-open] [--scan]',
+    '  skill-doctor [--project <path>] [--port <number>] [--host <host>] [--app-home <path>] [--no-open] [--scan]',
     '',
     'Default behavior:',
     '  - Uses the current working directory as the project',
+    '  - Binds the local server to 127.0.0.1',
     '  - Starts the local UI server',
     '  - Opens the browser',
     '',
     'Optional flags:',
     '  --scan    Run an initial scan before starting the UI',
+    '  --host    Override the bind host, for example 0.0.0.0',
   ].join('\n'));
 }

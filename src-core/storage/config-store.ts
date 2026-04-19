@@ -1,4 +1,4 @@
-import type { AppConfig } from '../types.ts';
+import type { AppConfig, AppConfigView } from '../types.ts';
 import { appPaths, ensureAppHome } from './app-home.ts';
 import { readJson, writeJsonAtomic } from './fs-utils.ts';
 
@@ -28,7 +28,9 @@ export async function readConfig(customHome?: string): Promise<AppConfig> {
 
 export async function writeConfig(patch: Partial<AppConfig>, customHome?: string): Promise<AppConfig> {
   const paths = await ensureAppHome(customHome);
-  const next = mergeConfig(defaultConfig, patch);
+  const stored = await readJson<Partial<AppConfig>>(paths.config, {});
+  const current = mergeConfig(defaultConfig, stored ?? {});
+  const next = mergeConfig(current, patch);
   await writeJsonAtomic(paths.config, next);
   return next;
 }
@@ -50,4 +52,24 @@ function mergeConfig(base: AppConfig, patch: Partial<AppConfig>): AppConfig {
       ...(patch.analysis || {}),
     },
   };
+}
+
+export function sanitizeConfig(config: AppConfig): AppConfigView {
+  return {
+    provider: config.provider,
+    baseUrl: config.baseUrl,
+    model: config.model,
+    apiKey: '',
+    hasApiKey: Boolean(config.apiKey.trim()),
+    apiKeyHint: maskApiKey(config.apiKey),
+    scan: { ...config.scan },
+    analysis: { ...config.analysis },
+  };
+}
+
+function maskApiKey(apiKey: string): string | undefined {
+  const trimmed = apiKey.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length <= 8) return '***configured***';
+  return `${trimmed.slice(0, 3)}***${trimmed.slice(-4)}`;
 }

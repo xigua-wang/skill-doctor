@@ -1,4 +1,5 @@
 import type { Dirent } from 'node:fs';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeScanWithModel } from '../analysis/analyze-scan.ts';
@@ -80,11 +81,11 @@ async function collectSkill(skillDir: string, root: RootCandidate): Promise<Skil
   }
 
   const scope = skillDir.includes(`${path.sep}.system${path.sep}`) ? 'system' : root.scope;
-  const precedence = scope === 'project' ? 300 : scope === 'global' ? 200 : 100;
+  const precedence = computePrecedence(root, scope);
   const key = normalizeName(parsed.name || path.basename(skillDir));
 
   return {
-    id: `${root.agent}:${key}:${Buffer.from(skillDir).toString('base64').slice(0, 10)}`,
+    id: `${root.agent}:${key}:${createStableId(skillDir)}`,
     groupKey: `${root.agent}:${key}`,
     name: parsed.name || path.basename(skillDir),
     description: parsed.description,
@@ -158,7 +159,7 @@ function buildResolutionChains(skills: SkillRecord[]): ResolutionChain[] {
         key,
         name: winner.name,
         winnerSkillId: winner.id,
-        reason: `${winner.scope} precedence outranks ${candidates.slice(1).map((item) => item.scope).join(', ')} for the ${winner.agent} resolver.`,
+        reason: buildResolutionReason(winner, candidates.slice(1)),
         candidates: candidates.map((item) => ({
           id: item.id,
           name: item.name,
@@ -220,6 +221,7 @@ function extractTriggers(text: string): string[] {
 function inferCompatibility(root: RootCandidate, content: string, files: string[]): string[] {
   const compatibility = new Set([root.agent]);
   const lower = `${content}\n${files.join('\n')}`.toLowerCase();
+  if (lower.includes('openclaw')) compatibility.add('openclaw');
   if (lower.includes('claude code')) compatibility.add('claude');
   if (lower.includes('codex')) compatibility.add('codex');
   if (lower.includes('copilot')) compatibility.add('copilot');
@@ -227,6 +229,29 @@ function inferCompatibility(root: RootCandidate, content: string, files: string[
   if (lower.includes('cursor')) compatibility.add('cursor');
   if (lower.includes('github')) compatibility.add('github');
   return [...compatibility];
+}
+
+function computePrecedence(root: RootCandidate, scope: 'project' | 'global' | 'system'): number {
+  if (scope === 'system') return 100;
+
+  const normalizedRoot = normalizeRootPath(root.path);
+  if (scope === 'project') {
+    if (normalizedRoot.endsWith('/.agents/skills')) return 320;
+    if (root.agent === 'openclaw' && normalizedRoot.endsWith('/skills')) return 330;
+    return 300;
+  }
+
+  if (normalizedRoot.endsWith('/.agents/skills')) return 220;
+  if (root.agent === 'openclaw' && normalizedRoot.endsWith('/.openclaw/skills')) return 210;
+  return 200;
+}
+
+function buildResolutionReason(winner: SkillRecord, losers: SkillRecord[]): string {
+  if (!losers.length) {
+    return `Precedence ${winner.precedence} selects the visible ${winner.agent} definition.`;
+  }
+  const lowerBands = [...new Set(losers.map((item) => `${item.scope} (${item.precedence})`))].join(', ');
+  return `${winner.scope} precedence (${winner.precedence}) outranks ${lowerBands} for the ${winner.agent} resolver.`;
 }
 
 function shouldScanFile(relativeFile: string): boolean {
@@ -313,6 +338,14 @@ function matchLine(text: string, pattern: RegExp): string {
 function cleanValue(value: string): string {
   if (!value) return '';
   return value.trim().replace(/^['"`]+|['"`]+$/g, '');
+}
+
+function normalizeRootPath(value: string): string {
+  return path.resolve(value).replace(/\\/g, '/');
+}
+
+function createStableId(value: string): string {
+  return createHash('sha1').update(normalizeRootPath(value)).digest('hex').slice(0, 12);
 }
 
 function createScanId(generatedAt: string, projectDir: string): string {

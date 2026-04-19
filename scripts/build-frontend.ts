@@ -11,7 +11,10 @@ const watch = process.argv.includes('--watch');
 
 await fs.rm(distDir, { recursive: true, force: true });
 await fs.mkdir(path.join(distDir, 'assets'), { recursive: true });
-await validateDemoDataset(path.join(publicDir, 'data', 'demo-scan.json'));
+await validateDemoDatasets([
+  path.join(publicDir, 'data', 'demo-scan.json'),
+  path.join(publicDir, 'data', 'demo-scan-openclaw.json'),
+]);
 await copyPublic(publicDir, distDir);
 await writeIndexHtml(path.join(distDir, 'index.html'));
 
@@ -77,8 +80,10 @@ async function copyPublic(sourceDir: string, targetDir: string): Promise<void> {
   }
 }
 
-async function validateDemoDataset(filePath: string): Promise<void> {
-  const text = await fs.readFile(filePath, 'utf8');
-  const value = JSON.parse(text) as unknown;
-  assertValidScanRecord(value, 'public/data/demo-scan.json');
+async function validateDemoDatasets(filePaths: string[]): Promise<void> {
+  for (const filePath of filePaths) {
+    const text = await fs.readFile(filePath, 'utf8');
+    const value = JSON.parse(text) as unknown;
+    assertValidScanRecord(value, path.relative(cwd, filePath));
+  }
 }

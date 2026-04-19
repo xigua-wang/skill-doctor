@@ -2,12 +2,13 @@ import type { Dirent } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { AppConfig, RootCandidate } from '../types.ts';
-import { exists } from '../storage/fs-utils.ts';
+import { exists, readJson } from '../storage/fs-utils.ts';
 
 export async function discoverRoots(input: { projectDir: string; homeDir: string; config: AppConfig }): Promise<RootCandidate[]> {
   const candidates = [
     ...buildKnownCandidates(input.projectDir, input.homeDir, input.config),
     ...buildConfiguredCandidates(input.projectDir, input.homeDir, input.config),
+    ...await discoverOpenClawConfigCandidates(input.projectDir, input.homeDir),
   ];
   const seenPaths = new Set(candidates.map((candidate) => candidate.path));
   const fallbackCandidates = input.config.scan.enableFallbackDiscovery
@@ -39,22 +40,42 @@ function buildConfiguredCandidates(projectDir: string, homeDir: string, config: 
 
 function buildKnownCandidates(projectDir: string, homeDir: string, config: AppConfig): RootCandidate[] {
   const projectCandidates: RootCandidate[] = config.scan.includeProjectRoots === false ? [] : [
+    { label: 'OpenClaw Workspace', path: path.join(projectDir, 'skills'), scope: 'project', agent: 'openclaw', confidence: 'confirmed', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Codex Project', path: path.join(projectDir, '.codex/skills'), scope: 'project', agent: 'codex', confidence: 'confirmed', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Claude Project', path: path.join(projectDir, '.claude/skills'), scope: 'project', agent: 'claude', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
-    { label: 'Agents Project', path: path.join(projectDir, '.agents/skills'), scope: 'project', agent: 'generic', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
+    { label: 'OpenClaw Agent Project', path: path.join(projectDir, '.agents/skills'), scope: 'project', agent: 'openclaw', confidence: 'confirmed', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Copilot Project', path: path.join(projectDir, '.copilot/skills'), scope: 'project', agent: 'copilot', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Cursor Project', path: path.join(projectDir, '.cursor/skills'), scope: 'project', agent: 'cursor', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
     { label: 'GitHub Project', path: path.join(projectDir, '.github/skills'), scope: 'project', agent: 'github', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
   ];
   const globalCandidates: RootCandidate[] = config.scan.includeGlobalRoots === false ? [] : [
+    { label: 'OpenClaw Global', path: path.join(homeDir, '.openclaw/skills'), scope: 'global', agent: 'openclaw', confidence: 'confirmed', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Codex Global', path: path.join(homeDir, '.codex/skills'), scope: 'global', agent: 'codex', confidence: 'confirmed', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Claude Global', path: path.join(homeDir, '.claude/skills'), scope: 'global', agent: 'claude', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
-    { label: 'Agents Global', path: path.join(homeDir, '.agents/skills'), scope: 'global', agent: 'generic', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
+    { label: 'OpenClaw Agent Global', path: path.join(homeDir, '.agents/skills'), scope: 'global', agent: 'openclaw', confidence: 'confirmed', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Copilot Global', path: path.join(homeDir, '.copilot/skills'), scope: 'global', agent: 'copilot', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
     { label: 'Cursor Global', path: path.join(homeDir, '.cursor/skills'), scope: 'global', agent: 'cursor', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
     { label: 'GitHub Global', path: path.join(homeDir, '.github/skills'), scope: 'global', agent: 'github', confidence: 'candidate', discoveryMethod: 'well-known-path', exists: false },
   ];
   return [...globalCandidates, ...projectCandidates];
+}
+
+async function discoverOpenClawConfigCandidates(projectDir: string, homeDir: string): Promise<RootCandidate[]> {
+  const configPath = path.join(homeDir, '.openclaw', 'openclaw.json');
+  const config = await readJson<OpenClawConfig>(configPath, null);
+  const configured = Array.isArray(config?.skills?.load?.extraDirs) ? config.skills.load.extraDirs : [];
+  const configDir = path.dirname(configPath);
+
+  return [...new Set(configured.map((item) => resolveOpenClawPath(item, configDir, homeDir)).filter(Boolean))]
+    .map((rootPath) => ({
+      label: 'OpenClaw Extra Dir',
+      path: rootPath,
+      scope: inferScope(rootPath, projectDir, homeDir),
+      agent: 'openclaw',
+      confidence: 'confirmed',
+      discoveryMethod: 'openclaw-config-extra-dir',
+      exists: false,
+    }));
 }
 
 async function discoverFallbackCandidates(projectDir: string, homeDir: string, seenPaths: Set<string>): Promise<RootCandidate[]> {
@@ -95,9 +116,10 @@ async function discoverFallbackCandidates(projectDir: string, homeDir: string, s
 }
 
 function inferAgent(dirName: string): string {
+  if (dirName === '.openclaw') return 'openclaw';
   if (dirName === '.codex') return 'codex';
   if (dirName === '.claude') return 'claude';
-  if (dirName === '.agents') return 'generic';
+  if (dirName === '.agents') return 'openclaw';
   if (dirName === '.copilot') return 'copilot';
   if (dirName === '.cursor') return 'cursor';
   if (dirName === '.github') return 'github';
@@ -106,12 +128,13 @@ function inferAgent(dirName: string): string {
 
 function inferAgentFromPath(rootPath: string): string {
   const lower = rootPath.toLowerCase();
+  if (lower.includes(`${path.sep}.openclaw${path.sep}`)) return 'openclaw';
   if (lower.includes(`${path.sep}.codex${path.sep}`)) return 'codex';
   if (lower.includes(`${path.sep}.claude${path.sep}`)) return 'claude';
   if (lower.includes(`${path.sep}.copilot${path.sep}`)) return 'copilot';
   if (lower.includes(`${path.sep}.cursor${path.sep}`)) return 'cursor';
   if (lower.includes(`${path.sep}.github${path.sep}`)) return 'github';
-  if (lower.includes(`${path.sep}.agents${path.sep}`)) return 'generic';
+  if (lower.includes(`${path.sep}.agents${path.sep}`)) return 'openclaw';
   return 'generic';
 }
 
@@ -123,6 +146,7 @@ function inferScope(rootPath: string, projectDir: string, homeDir: string): 'pro
 }
 
 function labelForAgent(agent: string): string {
+  if (agent === 'openclaw') return 'OpenClaw';
   if (agent === 'codex') return 'Codex';
   if (agent === 'claude') return 'Claude';
   if (agent === 'copilot') return 'Copilot';
@@ -133,4 +157,22 @@ function labelForAgent(agent: string): string {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function resolveOpenClawPath(value: unknown, configDir: string, homeDir: string): string {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed === '~') return homeDir;
+  if (trimmed.startsWith(`~${path.sep}`)) return path.join(homeDir, trimmed.slice(2));
+  if (path.isAbsolute(trimmed)) return path.resolve(trimmed);
+  return path.resolve(configDir, trimmed);
+}
+
+interface OpenClawConfig {
+  skills?: {
+    load?: {
+      extraDirs?: unknown[];
+    };
+  };
 }

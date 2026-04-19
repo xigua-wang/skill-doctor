@@ -22,6 +22,12 @@ export interface AppConfig {
   };
 }
 
+export interface AppConfigView extends Omit<AppConfig, 'apiKey'> {
+  apiKey: '';
+  hasApiKey: boolean;
+  apiKeyHint?: string;
+}
+
 export interface RootCandidate {
   label: string;
   path: string;

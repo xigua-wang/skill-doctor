@@ -25,6 +25,7 @@
   "scripts": {
     "scan": "node --import tsx ./scripts/scan-skills.ts --project .",
     "scan:demo": "node --import tsx ./scripts/scan-skills.ts --project ./examples/demo-workspace",
+    "scan:demo:openclaw": "node --import tsx ./scripts/scan-skills.ts --project ./examples/demo-workspace --home ./examples/demo-home --app-home ./.tmp/demo-openclaw-app-home",
     "dev": "node --import tsx ./scripts/build-frontend.ts --watch",
     "build": "node --import tsx ./scripts/build-frontend.ts",
     "build:package": "node --import tsx ./scripts/build-package.ts",

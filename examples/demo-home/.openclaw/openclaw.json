@@ -1,0 +1,9 @@
+{
+  "skills": {
+    "load": {
+      "extraDirs": [
+        "./shared-extra-skills"
+      ]
+    }
+  }
+}

@@ -1,0 +1,861 @@
+{
+  "id": "2026-04-19T09-06-55-202Z--demo-workspace",
+  "generatedAt": "2026-04-19T09:06:55.202Z",
+  "project": {
+    "name": "demo-workspace",
+    "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace"
+  },
+  "scannedProject": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace",
+  "scanner": {
+    "version": "0.2.0",
+    "rootsStrategy": "known-paths-plus-fallbacks"
+  },
+  "config": {
+    "provider": "openai",
+    "baseUrl": "https://api.openai.com/v1",
+    "model": "gpt-5.4"
+  },
+  "roots": [
+    {
+      "label": "OpenClaw Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/skills",
+      "scope": "global",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "OpenClaw Agent Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.agents/skills",
+      "scope": "global",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "OpenClaw Workspace",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/skills",
+      "scope": "project",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "Codex Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills",
+      "scope": "project",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 3
+    },
+    {
+      "label": "Claude Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.claude/skills",
+      "scope": "project",
+      "agent": "claude",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "OpenClaw Agent Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.agents/skills",
+      "scope": "project",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 2
+    },
+    {
+      "label": "Copilot Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.copilot/skills",
+      "scope": "project",
+      "agent": "copilot",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "GitHub Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.github/skills",
+      "scope": "project",
+      "agent": "github",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "OpenClaw Extra Dir",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/shared-extra-skills",
+      "scope": "global",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "openclaw-config-extra-dir",
+      "exists": true,
+      "skillsCount": 1
+    }
+  ],
+  "rootCandidates": [
+    {
+      "label": "OpenClaw Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/skills",
+      "scope": "global",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Codex Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.codex/skills",
+      "scope": "global",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": false
+    },
+    {
+      "label": "Claude Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.claude/skills",
+      "scope": "global",
+      "agent": "claude",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": false
+    },
+    {
+      "label": "OpenClaw Agent Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.agents/skills",
+      "scope": "global",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Copilot Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.copilot/skills",
+      "scope": "global",
+      "agent": "copilot",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": false
+    },
+    {
+      "label": "Cursor Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.cursor/skills",
+      "scope": "global",
+      "agent": "cursor",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": false
+    },
+    {
+      "label": "GitHub Global",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.github/skills",
+      "scope": "global",
+      "agent": "github",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": false
+    },
+    {
+      "label": "OpenClaw Workspace",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/skills",
+      "scope": "project",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Codex Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills",
+      "scope": "project",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Claude Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.claude/skills",
+      "scope": "project",
+      "agent": "claude",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "OpenClaw Agent Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.agents/skills",
+      "scope": "project",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Copilot Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.copilot/skills",
+      "scope": "project",
+      "agent": "copilot",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Cursor Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.cursor/skills",
+      "scope": "project",
+      "agent": "cursor",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": false
+    },
+    {
+      "label": "GitHub Project",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.github/skills",
+      "scope": "project",
+      "agent": "github",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "OpenClaw Extra Dir",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/shared-extra-skills",
+      "scope": "global",
+      "agent": "openclaw",
+      "confidence": "confirmed",
+      "discoveryMethod": "openclaw-config-extra-dir",
+      "exists": true
+    }
+  ],
+  "summary": {
+    "totalSkills": 12,
+    "projectSkills": 9,
+    "globalSkills": 3,
+    "systemSkills": 0,
+    "highRiskSkills": 2,
+    "conflictCount": 2,
+    "rootCount": 9
+  },
+  "conflicts": [
+    {
+      "id": "override:openclaw:release-guard",
+      "type": "override",
+      "severity": "medium",
+      "title": "Release Guard exists in multiple locations",
+      "summary": "The same normalized skill appears 5 times. Only the highest-precedence version is likely to win, which can hide older global or system definitions.",
+      "skills": [
+        "openclaw:release-guard:L1VzZXJzL3",
+        "openclaw:release-guard:L1VzZXJzL3",
+        "openclaw:release-guard:L1VzZXJzL3",
+        "openclaw:release-guard:L1VzZXJzL3",
+        "openclaw:release-guard:L1VzZXJzL3"
+      ],
+      "suggestedFix": "Rename the lower-priority skill or consolidate the behavior into one canonical definition."
+    },
+    {
+      "id": "override:codex:release-guard",
+      "type": "override",
+      "severity": "high",
+      "title": "Release Guard exists in multiple locations",
+      "summary": "The same normalized skill appears 2 times. Only the highest-precedence version is likely to win, which can hide older global or system definitions.",
+      "skills": [
+        "codex:release-guard:L1VzZXJzL3",
+        "codex:release-guard:L1VzZXJzL3"
+      ],
+      "suggestedFix": "Rename the lower-priority skill or consolidate the behavior into one canonical definition."
+    }
+  ],
+  "resolutionChains": [
+    {
+      "key": "openclaw:release-guard",
+      "name": "Release Guard",
+      "winnerSkillId": "openclaw:release-guard:L1VzZXJzL3",
+      "reason": "project precedence (330) outranks project (320), global (220), global (210), global (200) for the openclaw resolver.",
+      "candidates": [
+        {
+          "id": "openclaw:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "project",
+          "agent": "openclaw",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/skills/release-guard",
+          "confidence": "confirmed",
+          "discoveryMethod": "well-known-path"
+        },
+        {
+          "id": "openclaw:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "project",
+          "agent": "openclaw",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.agents/skills/release-guard",
+          "confidence": "confirmed",
+          "discoveryMethod": "well-known-path"
+        },
+        {
+          "id": "openclaw:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "global",
+          "agent": "openclaw",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.agents/skills/release-guard",
+          "confidence": "confirmed",
+          "discoveryMethod": "well-known-path"
+        },
+        {
+          "id": "openclaw:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "global",
+          "agent": "openclaw",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/skills/release-guard",
+          "confidence": "confirmed",
+          "discoveryMethod": "well-known-path"
+        },
+        {
+          "id": "openclaw:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "global",
+          "agent": "openclaw",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/shared-extra-skills/release-guard",
+          "confidence": "confirmed",
+          "discoveryMethod": "openclaw-config-extra-dir"
+        }
+      ]
+    },
+    {
+      "key": "codex:release-guard",
+      "name": "Release Guard",
+      "winnerSkillId": "codex:release-guard:L1VzZXJzL3",
+      "reason": "project precedence (300) outranks project (300) for the codex resolver.",
+      "candidates": [
+        {
+          "id": "codex:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "project",
+          "agent": "codex",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills/release-guard",
+          "confidence": "confirmed",
+          "discoveryMethod": "well-known-path"
+        },
+        {
+          "id": "codex:release-guard:L1VzZXJzL3",
+          "name": "Release Guard",
+          "scope": "project",
+          "agent": "codex",
+          "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills/release-guard-v2",
+          "confidence": "confirmed",
+          "discoveryMethod": "well-known-path"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "openclaw:release-guard:L1VzZXJzL3",
+      "groupKey": "openclaw:release-guard",
+      "name": "Release Guard",
+      "description": "OpenClaw workspace-level release guard that should win over lower-precedence copies.",
+      "triggers": [
+        "openclaw release"
+      ],
+      "scope": "project",
+      "agent": "openclaw",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/skills/release-guard",
+      "precedence": 330,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "openclaw"
+      ],
+      "risks": [],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 5,
+        "riskScore": 0,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "openclaw:api-triage:L1VzZXJzL3",
+      "groupKey": "openclaw:api-triage",
+      "name": "API Triage",
+      "description": "Investigates API integration failures and remote behavior.",
+      "triggers": [
+        "triage api"
+      ],
+      "scope": "project",
+      "agent": "openclaw",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.agents/skills/api-triage",
+      "precedence": 320,
+      "files": [
+        "SKILL.md",
+        "client.py"
+      ],
+      "compatibility": [
+        "openclaw"
+      ],
+      "risks": [
+        {
+          "file": "client.py",
+          "id": "network-fetch",
+          "label": "Pulls remote content or calls external services",
+          "severity": "medium"
+        },
+        {
+          "file": "client.py",
+          "id": "secret-env",
+          "label": "Reads API keys or tokens from the environment",
+          "severity": "low"
+        }
+      ],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 50,
+        "riskScore": 45,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 1,
+        "lowRiskCount": 1,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "openclaw:release-guard:L1VzZXJzL3",
+      "groupKey": "openclaw:release-guard",
+      "name": "Release Guard",
+      "description": "OpenClaw project agent release guard that should lose to workspace skills.",
+      "triggers": [
+        "openclaw release"
+      ],
+      "scope": "project",
+      "agent": "openclaw",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.agents/skills/release-guard",
+      "precedence": 320,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "openclaw"
+      ],
+      "risks": [],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 5,
+        "riskScore": 0,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "codex:deploy-router:L1VzZXJzL3",
+      "groupKey": "codex:deploy-router",
+      "name": "Deploy Router",
+      "description": "Routes deploy requests and environment-specific handoffs.",
+      "triggers": [
+        "deploy"
+      ],
+      "scope": "project",
+      "agent": "codex",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills/deploy-router",
+      "precedence": 300,
+      "files": [
+        "SKILL.md",
+        "router.ts"
+      ],
+      "compatibility": [
+        "codex"
+      ],
+      "risks": [
+        {
+          "file": "router.ts",
+          "id": "shell-exec",
+          "label": "Spawns shell commands or subprocesses",
+          "severity": "medium"
+        }
+      ],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 40,
+        "riskScore": 35,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 1,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "copilot:doc-gateway:L1VzZXJzL3",
+      "groupKey": "copilot:doc-gateway",
+      "name": "Doc Gateway",
+      "description": "Indexes project docs and links contributors to the right workflow notes.",
+      "triggers": [],
+      "scope": "project",
+      "agent": "copilot",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.copilot/skills/doc-gateway",
+      "precedence": 300,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "copilot"
+      ],
+      "risks": [],
+      "issues": [
+        {
+          "severity": "low",
+          "message": "No trigger phrases detected."
+        }
+      ],
+      "localPriority": {
+        "totalScore": 9,
+        "riskScore": 0,
+        "issueScore": 4,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 1
+      },
+      "rootConfidence": "candidate",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "claude:incident-cleanup:L1VzZXJzL3",
+      "groupKey": "claude:incident-cleanup",
+      "name": "Incident Cleanup",
+      "description": "Cleans up failed runtime state after an incident.",
+      "triggers": [
+        "incident cleanup"
+      ],
+      "scope": "project",
+      "agent": "claude",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.claude/skills/incident-cleanup",
+      "precedence": 300,
+      "files": [
+        "SKILL.md",
+        "cleanup.sh"
+      ],
+      "compatibility": [
+        "claude"
+      ],
+      "risks": [
+        {
+          "file": "cleanup.sh",
+          "id": "destructive-rm",
+          "label": "Potentially destructive file deletion",
+          "severity": "high"
+        }
+      ],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 105,
+        "riskScore": 100,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 1,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "candidate",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "codex:release-guard:L1VzZXJzL3",
+      "groupKey": "codex:release-guard",
+      "name": "Release Guard",
+      "description": "Reviews release automation and handles deploy prep with strict safety rails.",
+      "triggers": [
+        "release"
+      ],
+      "scope": "project",
+      "agent": "codex",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills/release-guard",
+      "precedence": 300,
+      "files": [
+        "SKILL.md",
+        "install.sh"
+      ],
+      "compatibility": [
+        "codex"
+      ],
+      "risks": [
+        {
+          "file": "install.sh",
+          "id": "curl-pipe-shell",
+          "label": "Downloads piped directly into a shell",
+          "severity": "high"
+        },
+        {
+          "file": "install.sh",
+          "id": "network-fetch",
+          "label": "Pulls remote content or calls external services",
+          "severity": "medium"
+        },
+        {
+          "file": "install.sh",
+          "id": "secret-env",
+          "label": "Reads API keys or tokens from the environment",
+          "severity": "low"
+        }
+      ],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 150,
+        "riskScore": 145,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 1,
+        "mediumRiskCount": 1,
+        "lowRiskCount": 1,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "codex:release-guard:L1VzZXJzL3",
+      "groupKey": "codex:release-guard",
+      "name": "Release Guard",
+      "description": "A second release guard variant used to validate override detection.",
+      "triggers": [
+        "release"
+      ],
+      "scope": "project",
+      "agent": "codex",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.codex/skills/release-guard-v2",
+      "precedence": 300,
+      "files": [
+        "SKILL.md",
+        "policy.md"
+      ],
+      "compatibility": [
+        "codex"
+      ],
+      "risks": [],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 5,
+        "riskScore": 0,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "github:workflow-surgeon:L1VzZXJzL3",
+      "groupKey": "github:workflow-surgeon",
+      "name": "Workflow Surgeon",
+      "description": "Repairs broken GitHub workflow behavior and action sequencing.",
+      "triggers": [
+        "workflow fix"
+      ],
+      "scope": "project",
+      "agent": "github",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-workspace/.github/skills/workflow-surgeon",
+      "precedence": 300,
+      "files": [
+        "SKILL.md",
+        "actions.js"
+      ],
+      "compatibility": [
+        "github"
+      ],
+      "risks": [
+        {
+          "file": "actions.js",
+          "id": "shell-exec",
+          "label": "Spawns shell commands or subprocesses",
+          "severity": "medium"
+        }
+      ],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 40,
+        "riskScore": 35,
+        "issueScore": 0,
+        "scopeBonus": 5,
+        "highRiskCount": 0,
+        "mediumRiskCount": 1,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "candidate",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "openclaw:release-guard:L1VzZXJzL3",
+      "groupKey": "openclaw:release-guard",
+      "name": "Release Guard",
+      "description": "OpenClaw personal agent release guard from the demo home directory.",
+      "triggers": [
+        "openclaw release"
+      ],
+      "scope": "global",
+      "agent": "openclaw",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.agents/skills/release-guard",
+      "precedence": 220,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "openclaw"
+      ],
+      "risks": [],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 0,
+        "riskScore": 0,
+        "issueScore": 0,
+        "scopeBonus": 0,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "openclaw:release-guard:L1VzZXJzL3",
+      "groupKey": "openclaw:release-guard",
+      "name": "Release Guard",
+      "description": "OpenClaw managed local release guard that should rank below personal agent skills.",
+      "triggers": [
+        "openclaw release"
+      ],
+      "scope": "global",
+      "agent": "openclaw",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/skills/release-guard",
+      "precedence": 210,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "openclaw"
+      ],
+      "risks": [],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 0,
+        "riskScore": 0,
+        "issueScore": 0,
+        "scopeBonus": 0,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "openclaw:release-guard:L1VzZXJzL3",
+      "groupKey": "openclaw:release-guard",
+      "name": "Release Guard",
+      "description": "OpenClaw extra-dir release guard discovered from openclaw.json as lowest precedence.",
+      "triggers": [
+        "openclaw release"
+      ],
+      "scope": "global",
+      "agent": "openclaw",
+      "path": "/Users/xuzhijie/Desktop/workspace/skill-doctor/examples/demo-home/.openclaw/shared-extra-skills/release-guard",
+      "precedence": 200,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "openclaw"
+      ],
+      "risks": [],
+      "issues": [],
+      "localPriority": {
+        "totalScore": 0,
+        "riskScore": 0,
+        "issueScore": 0,
+        "scopeBonus": 0,
+        "highRiskCount": 0,
+        "mediumRiskCount": 0,
+        "lowRiskCount": 0,
+        "highIssueCount": 0,
+        "mediumIssueCount": 0,
+        "lowIssueCount": 0
+      },
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "openclaw-config-extra-dir"
+    }
+  ],
+  "analysis": {
+    "status": "error",
+    "generatedAt": "2026-04-19T09:06:55.213Z",
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "reason": "missing_config",
+    "message": "Model analysis is mandatory, but apiKey, baseUrl, or model is missing."
+  },
+  "storage": {
+    "filePath": "/Users/xuzhijie/Desktop/workspace/skill-doctor/.tmp/demo-openclaw-app-home/scans/2026-04-19T09-06-55-202Z--demo-workspace.json"
+  }
+}

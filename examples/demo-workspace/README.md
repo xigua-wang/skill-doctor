@@ -11,6 +11,7 @@ This workspace exists to validate Skill Doctor features against a real directory
 - low-risk secret or token references
 - missing trigger extraction to generate local issues
 - mixed agents across `.codex`, `.claude`, `.agents`, `.copilot`, and `.github`
+- OpenClaw precedence across `skills/`, project `.agents/skills`, home `.agents/skills`, managed `~/.openclaw/skills`, and config-driven `extraDirs`
 
 ## Run it
 
@@ -20,10 +21,20 @@ From the repository root:
 npm run scan:demo
 ```
 
+For the OpenClaw-specific fixture:
+
+```bash
+npm run scan:demo:openclaw
+```
+
 Or explicitly:
 
 ```bash
 npm run scan -- --project ./examples/demo-workspace
+```
+
+```bash
+node --import tsx ./scripts/scan-skills.ts --project ./examples/demo-workspace --home ./examples/demo-home --app-home ./.tmp/demo-openclaw-app-home
 ```
 
 ## Expected outcomes
@@ -35,3 +46,4 @@ npm run scan -- --project ./examples/demo-workspace
 - `workflow-surgeon` contains subprocess usage.
 - `api-triage` contains network fetch logic.
 - `copilot/skills/doc-gateway` is missing a trigger section, so it should produce an issue.
+- In the OpenClaw fixture, `Release Guard` should resolve in this order: `skills/` > project `.agents/skills` > home `.agents/skills` > `~/.openclaw/skills` > `skills.load.extraDirs`.

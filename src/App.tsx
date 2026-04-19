@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AppConfig, AppLocale, ScanAnalysis, ScanListItem, ScanRecord, SkillLocalPriority, SkillRecord } from '../src-core/types.ts';
+import type { AppConfig, AppConfigView, AppLocale, ScanAnalysis, ScanListItem, ScanRecord, SkillLocalPriority, SkillRecord } from '../src-core/types.ts';
 import { getSkillLocalPriority } from '../src-core/analysis/local-priority.ts';
 import { coerceValidatedScanRecord } from '../src-core/validation/scan-schema.ts';
 
@@ -13,9 +13,11 @@ type StatusState = {
   values?: TranslationValues;
 };
 
-const emptyConfig: AppConfig = {
+const emptyConfig: AppConfigView = {
   apiKey: '',
+  hasApiKey: false,
   baseUrl: 'https://api.openai.com/v1',
+  apiKeyHint: undefined,
   model: 'gpt-5.4',
   provider: 'openai',
   scan: {
@@ -49,6 +51,8 @@ type DirectoryBrowserState = {
 type LoadScanOptions = {
   successStatus?: StatusState;
 };
+
+type DemoDatasetKey = 'default' | 'openclaw';
 
 const translations = {
   en: {
@@ -85,6 +89,9 @@ const translations = {
     heroBody: 'Skill Doctor now runs on typed scan records, typed config state, and a typed React UI over the local Node API.',
     useStoredHistory: 'Use stored history',
     useDemoDataset: 'Use demo dataset',
+    demoDatasetGeneric: 'Generic demo',
+    demoDatasetOpenClaw: 'OpenClaw demo',
+    demoDatasetLabel: 'Demo dataset',
     dataSource: 'Data source',
     storedScanHistory: 'Stored scan history',
     demoDataset: 'Demo dataset',
@@ -120,6 +127,10 @@ const translations = {
     analysisMaxSkills: 'Analysis max skills',
     saveSettings: 'Save settings',
     testConnection: 'Test connection',
+    apiKeyConfigured: 'API key status',
+    apiKeyConfiguredYes: 'Configured',
+    apiKeyConfiguredNo: 'Not configured',
+    apiKeyLeaveBlank: 'Leave blank to keep the currently stored key unchanged.',
     noModelConfigured: 'no model configured',
     mandatoryAnalysisHint: 'Every new scan runs through the model analysis stage. Configure the provider, base URL, model, and API key here.',
     modelLayerEyebrow: 'Model Layer',
@@ -241,6 +252,9 @@ const translations = {
     heroBody: 'Skill Doctor 现在基于类型化扫描记录、类型化配置状态，以及运行在本地 Node API 之上的类型化 React UI。',
     useStoredHistory: '使用历史记录',
     useDemoDataset: '使用演示数据',
+    demoDatasetGeneric: '通用演示',
+    demoDatasetOpenClaw: 'OpenClaw 演示',
+    demoDatasetLabel: '演示数据集',
     dataSource: '数据来源',
     storedScanHistory: '历史扫描记录',
     demoDataset: '演示数据集',
@@ -276,6 +290,10 @@ const translations = {
     analysisMaxSkills: '分析技能上限',
     saveSettings: '保存设置',
     testConnection: '测试连接',
+    apiKeyConfigured: 'API key 状态',
+    apiKeyConfiguredYes: '已配置',
+    apiKeyConfiguredNo: '未配置',
+    apiKeyLeaveBlank: '留空表示保留当前已保存的 key，不会覆盖。',
     noModelConfigured: '未配置模型',
     mandatoryAnalysisHint: '每次新扫描都会进入模型分析阶段，请在这里配置 provider、base URL、model 和 API key。',
     modelLayerEyebrow: '模型层',
@@ -370,7 +388,8 @@ type TranslationKey = keyof typeof translations.en;
 export default function App() {
   const [locale, setLocale] = useState<Locale>(() => readInitialLocale());
   const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
-  const [demoScan, setDemoScan] = useState<ScanRecord | null>(null);
+  const [demoScans, setDemoScans] = useState<Record<DemoDatasetKey, ScanRecord | null>>({ default: null, openclaw: null });
+  const [selectedDemoDataset, setSelectedDemoDataset] = useState<DemoDatasetKey>('default');
   const [scans, setScans] = useState<ScanListItem[]>([]);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [scanLoadError, setScanLoadError] = useState<string | null>(null);
@@ -387,7 +406,7 @@ export default function App() {
   const [status, setStatus] = useState<StatusState>({ key: 'loadingLocalData' });
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [config, setConfig] = useState<AppConfig>(emptyConfig);
+  const [config, setConfig] = useState<AppConfigView>(emptyConfig);
   const [scanTarget, setScanTarget] = useState('.');
   const [isBusy, setIsBusy] = useState(false);
   const [connectionTest, setConnectionTest] = useState<ConnectionTestResult | null>(null);
@@ -414,16 +433,20 @@ export default function App() {
 
     async function boot() {
       try {
-        const [configData, scansData, demoData] = await Promise.all([
-          requestJson<AppConfig>('/api/config').catch(() => emptyConfig),
+        const [configData, scansData, demoData, openClawDemoData] = await Promise.all([
+          requestJson<AppConfigView>('/api/config').catch(() => emptyConfig),
           requestJson<ScanListItem[]>('/api/scans').catch(() => []),
           fetchJson<ScanRecord>('/data/demo-scan.json'),
+          fetchJson<ScanRecord>('/data/demo-scan-openclaw.json').catch(() => null),
         ]);
 
         if (!active) return;
         setConfig(configData ?? emptyConfig);
         setScans(scansData ?? []);
-        setDemoScan(demoData ? coerceValidatedScanRecord(demoData, 'demo dataset') : null);
+        setDemoScans({
+          default: demoData ? coerceValidatedScanRecord(demoData, 'demo dataset') : null,
+          openclaw: openClawDemoData ? coerceValidatedScanRecord(openClawDemoData, 'openclaw demo dataset') : null,
+        });
 
         if ((scansData ?? []).length) {
           await loadScan(scansData[0].id, {
@@ -452,7 +475,8 @@ export default function App() {
     };
   }, []);
 
-  const data = source === 'demo' ? demoScan : currentScan;
+  const activeDemoScan = demoScans[selectedDemoDataset];
+  const data = source === 'demo' ? activeDemoScan : currentScan;
   const analysis = data?.analysis ?? null;
   const summary = data?.summary ?? {
     totalSkills: 0,
@@ -613,7 +637,7 @@ export default function App() {
     const payload = readConfigForm(event.currentTarget, config);
     setIsBusy(true);
     try {
-      const next = await requestJson<AppConfig>('/api/config', {
+      const next = await requestJson<AppConfigView>('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -696,7 +720,7 @@ export default function App() {
               <button className="button primary" type="button" onClick={() => setSource('history')} disabled={!scans.length}>
                 {t('useStoredHistory')}
               </button>
-              <button className="button secondary" type="button" onClick={() => setSource('demo')} disabled={!demoScan}>
+              <button className="button secondary" type="button" onClick={() => setSource('demo')} disabled={!activeDemoScan}>
                 {t('useDemoDataset')}
               </button>
               <button className="button secondary" type="button" onClick={() => setIsHistoryOpen(true)}>
@@ -719,6 +743,9 @@ export default function App() {
             <div className="source-card">
               <span>{t('dataSource')}</span>
               <strong>{source === 'history' ? t('storedScanHistory') : t('demoDataset')}</strong>
+              {source === 'demo' ? (
+                <p>{t('demoDatasetLabel')}: {selectedDemoDataset === 'openclaw' ? t('demoDatasetOpenClaw') : t('demoDatasetGeneric')}</p>
+              ) : null}
               <p>{t('generatedProject', { date: formatDate(data?.generatedAt, locale), project: data?.project?.path ?? data?.scannedProject ?? t('notAvailableShort') })}</p>
             </div>
             <div className="status-line">{t(status.key, status.values)}</div>
@@ -844,6 +871,26 @@ export default function App() {
           </div>
           <div className="panel overview-panel">
             <div className="section-heading"><div><p className="eyebrow">{t('overviewEyebrow')}</p><h2>{t('workspaceHealth')}</h2></div></div>
+            {source === 'demo' ? (
+              <div className="filters">
+                <button
+                  className={`button secondary ${selectedDemoDataset === 'default' ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => setSelectedDemoDataset('default')}
+                  disabled={!demoScans.default}
+                >
+                  {t('demoDatasetGeneric')}
+                </button>
+                <button
+                  className={`button secondary ${selectedDemoDataset === 'openclaw' ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => setSelectedDemoDataset('openclaw')}
+                  disabled={!demoScans.openclaw}
+                >
+                  {t('demoDatasetOpenClaw')}
+                </button>
+              </div>
+            ) : null}
             <div className="metric-grid">
               <MetricCard label={t('totalSkills')} value={summary.totalSkills} />
               <MetricCard label={t('projectSkills')} value={summary.projectSkills} />
@@ -1177,7 +1224,13 @@ export default function App() {
             </label>
             <label>
               <span>{t('apiKey')}</span>
-              <input name="apiKey" type="password" defaultValue={config.apiKey} />
+              <input name="apiKey" type="password" defaultValue="" />
+              <small>
+                {t('apiKeyConfigured')}: {config.hasApiKey ? t('apiKeyConfiguredYes') : t('apiKeyConfiguredNo')}
+                {config.apiKeyHint ? ` (${config.apiKeyHint})` : ''}
+                {' '}
+                {t('apiKeyLeaveBlank')}
+              </small>
             </label>
             <label>
               <span>{t('maxDepth')}</span>
@@ -1308,13 +1361,13 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-function readConfigForm(formElement: HTMLFormElement, config: AppConfig): AppConfig {
+function readConfigForm(formElement: HTMLFormElement, config: AppConfigView): Partial<AppConfig> {
   const form = new FormData(formElement);
-  return {
+  const apiKey = `${form.get('apiKey') || ''}`.trim();
+  const payload: Partial<AppConfig> = {
     provider: `${form.get('provider') || ''}`.trim(),
     baseUrl: `${form.get('baseUrl') || ''}`.trim(),
     model: `${form.get('model') || ''}`.trim(),
-    apiKey: `${form.get('apiKey') || ''}`.trim(),
     scan: {
       ...config.scan,
       maxDepth: Number(form.get('maxDepth') || 5),
@@ -1329,6 +1382,10 @@ function readConfigForm(formElement: HTMLFormElement, config: AppConfig): AppCon
       maxSkills: Number(form.get('analysisMaxSkills') || 12),
     },
   };
+  if (apiKey) {
+    payload.apiKey = apiKey;
+  }
+  return payload;
 }
 
 function topRiskSeverity(skill: SkillRecord): 'high' | 'medium' | 'low' | undefined {
