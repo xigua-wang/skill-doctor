@@ -1,0 +1,281 @@
+{
+  "id": "demo-scan",
+  "generatedAt": "2026-04-17T10:30:00.000Z",
+  "project": {
+    "name": "demo-workspace",
+    "path": "/demo/workspace"
+  },
+  "scannedProject": "/demo/workspace",
+  "scanner": {
+    "version": "0.2.0",
+    "rootsStrategy": "known-paths-plus-fallbacks"
+  },
+  "config": {
+    "provider": "openai",
+    "baseUrl": "https://api.openai.com/v1",
+    "model": "gpt-5.4"
+  },
+  "summary": {
+    "totalSkills": 4,
+    "projectSkills": 2,
+    "globalSkills": 1,
+    "systemSkills": 1,
+    "highRiskSkills": 1,
+    "conflictCount": 2,
+    "rootCount": 3
+  },
+  "roots": [
+    {
+      "label": "Codex Global",
+      "path": "/Users/demo/.codex/skills",
+      "scope": "global",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    },
+    {
+      "label": "Codex Project",
+      "path": "/demo/workspace/.codex/skills",
+      "scope": "project",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 2
+    },
+    {
+      "label": "GitHub Project",
+      "path": "/demo/workspace/.github/skills",
+      "scope": "project",
+      "agent": "github",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true,
+      "skillsCount": 1
+    }
+  ],
+  "rootCandidates": [
+    {
+      "label": "Codex Global",
+      "path": "/Users/demo/.codex/skills",
+      "scope": "global",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "Codex Project",
+      "path": "/demo/workspace/.codex/skills",
+      "scope": "project",
+      "agent": "codex",
+      "confidence": "confirmed",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    },
+    {
+      "label": "GitHub Project",
+      "path": "/demo/workspace/.github/skills",
+      "scope": "project",
+      "agent": "github",
+      "confidence": "candidate",
+      "discoveryMethod": "well-known-path",
+      "exists": true
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "override:codex:release-notes",
+      "type": "override",
+      "severity": "medium",
+      "title": "release-notes exists in multiple locations",
+      "summary": "A project skill overrides a global release-notes skill.",
+      "skills": [
+        "codex:release-notes:project",
+        "codex:release-notes:global"
+      ],
+      "suggestedFix": "Consolidate the skill or rename the lower-priority copy."
+    },
+    {
+      "id": "trigger:codex:ship-it",
+      "type": "trigger-overlap",
+      "severity": "medium",
+      "title": "Trigger overlap on \"ship-it\"",
+      "summary": "Different skills expose the same trigger phrase.",
+      "skills": [
+        "codex:release-notes:project",
+        "github:pr-brief:project"
+      ],
+      "suggestedFix": "Make trigger phrases more specific."
+    }
+  ],
+  "resolutionChains": [
+    {
+      "key": "codex:release-notes",
+      "name": "release-notes",
+      "winnerSkillId": "codex:release-notes:project",
+      "reason": "project precedence outranks global for the codex resolver.",
+      "candidates": [
+        {
+          "id": "codex:release-notes:project",
+          "name": "release-notes",
+          "scope": "project",
+          "agent": "codex",
+          "path": "/demo/workspace/.codex/skills/release-notes",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "codex:release-notes:global",
+          "name": "release-notes",
+          "scope": "global",
+          "agent": "codex",
+          "path": "/Users/demo/.codex/skills/release-notes",
+          "confidence": "confirmed"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "codex:release-notes:project",
+      "groupKey": "codex:release-notes",
+      "name": "release-notes",
+      "description": "Project release workflow with stronger branching rules.",
+      "triggers": [
+        "ship-it",
+        "prepare release notes"
+      ],
+      "scope": "project",
+      "agent": "codex",
+      "path": "/demo/workspace/.codex/skills/release-notes",
+      "precedence": 300,
+      "files": [
+        "SKILL.md",
+        "templates/release.md"
+      ],
+      "compatibility": [
+        "codex",
+        "github"
+      ],
+      "risks": [],
+      "issues": [],
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "github:pr-brief:project",
+      "groupKey": "github:pr-brief",
+      "name": "pr-brief",
+      "description": "Formats PR summaries for GitHub workflows.",
+      "triggers": [
+        "ship-it",
+        "summarize pr"
+      ],
+      "scope": "project",
+      "agent": "github",
+      "path": "/demo/workspace/.github/skills/pr-brief",
+      "precedence": 300,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "github",
+        "copilot"
+      ],
+      "risks": [],
+      "issues": [],
+      "rootConfidence": "candidate",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "codex:release-notes:global",
+      "groupKey": "codex:release-notes",
+      "name": "release-notes",
+      "description": "Global release helper that is currently shadowed by the project copy.",
+      "triggers": [
+        "prepare release notes"
+      ],
+      "scope": "global",
+      "agent": "codex",
+      "path": "/Users/demo/.codex/skills/release-notes",
+      "precedence": 200,
+      "files": [
+        "SKILL.md"
+      ],
+      "compatibility": [
+        "codex"
+      ],
+      "risks": [],
+      "issues": [],
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    },
+    {
+      "id": "codex:unsafe-cleanup:system",
+      "groupKey": "codex:unsafe-cleanup",
+      "name": "unsafe-cleanup",
+      "description": "Legacy cleanup automation that still shells out aggressively.",
+      "triggers": [
+        "clean everything"
+      ],
+      "scope": "system",
+      "agent": "codex",
+      "path": "/Users/demo/.codex/skills/.system/unsafe-cleanup",
+      "precedence": 100,
+      "files": [
+        "SKILL.md",
+        "scripts/cleanup.sh"
+      ],
+      "compatibility": [
+        "codex"
+      ],
+      "risks": [
+        {
+          "file": "scripts/cleanup.sh",
+          "id": "destructive-rm",
+          "label": "Potentially destructive file deletion",
+          "severity": "high"
+        }
+      ],
+      "issues": [],
+      "rootConfidence": "confirmed",
+      "discoveryMethod": "well-known-path"
+    }
+  ],
+  "analysis": {
+    "status": "completed",
+    "generatedAt": "2026-04-17T10:30:05.000Z",
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "summary": "The demo workspace shows a realistic override between project and global skills, plus one risky legacy system skill.",
+    "findings": [
+      "A project-local release workflow overrides the global release-notes skill.",
+      "The legacy unsafe-cleanup system skill still contains a destructive removal pattern."
+    ],
+    "recommendations": [
+      "Consolidate duplicated release-notes behavior into a single canonical skill.",
+      "Retire or sandbox the unsafe-cleanup system skill before wider rollout."
+    ],
+    "skillSpotlights": [
+      {
+        "skillId": "codex:release-notes:project",
+        "label": "override winner",
+        "rationale": "This project skill shadows the global release-notes variant and is the most likely source of release behavior in the workspace."
+      },
+      {
+        "skillId": "codex:unsafe-cleanup:system",
+        "label": "highest risk",
+        "rationale": "This system skill is the only one with a high-severity destructive deletion signal in the demo scan."
+      }
+    ],
+    "raw": {
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "skill-doctor",
+  "version": "0.1.0",
+  "bin": {
+    "skill-doctor": "./lib/skill-doctor.js",
+    "skill-doctor-scan": "./lib/skill-doctor-scan.js"
+  },
+  "files": [
+    "dist",
+    "lib",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "type": "module",
+  "description": "Local-first inspector for coding-agent skills, conflicts, precedence, and risk analysis.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xzj-abc/skill-doctor.git"
+  },
+  "homepage": "https://github.com/xzj-abc/skill-doctor#readme",
+  "bugs": {
+    "url": "https://github.com/xzj-abc/skill-doctor/issues"
+  },
+  "scripts": {
+    "scan": "node --import tsx ./scripts/scan-skills.ts --project .",
+    "scan:demo": "node --import tsx ./scripts/scan-skills.ts --project ./examples/demo-workspace",
+    "dev": "node --import tsx ./scripts/build-frontend.ts --watch",
+    "build": "node --import tsx ./scripts/build-frontend.ts",
+    "build:package": "node --import tsx ./scripts/build-package.ts",
+    "serve": "node --import tsx ./scripts/dev-server.ts --watch",
+    "report": "node --import tsx ./scripts/scan-skills.ts --markdown ./docs/latest-report.md --project .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
