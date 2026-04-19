@@ -72,20 +72,20 @@ Skill Doctor treats skills as inspectable infrastructure instead of hidden behav
 ### One-line app launch
 
 ```bash
-npx skill-doctor
+npx --package @xiguawang/skill-doctor skill-doctor
 ```
 
 ### Use as an npm package
 
 ```bash
-npm install -g skill-doctor
+npm install -g @xiguawang/skill-doctor
 skill-doctor
 ```
 
 Or run it without a global install:
 
 ```bash
-npx skill-doctor
+npx --package @xiguawang/skill-doctor skill-doctor
 ```
 
 By default, `skill-doctor`:

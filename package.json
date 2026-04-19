@@ -1,6 +1,6 @@
 {
-  "name": "skill-doctor",
-  "version": "0.1.0",
+  "name": "@xiguawang/skill-doctor",
+  "version": "0.1.1",
   "bin": {
     "skill-doctor": "./lib/skill-doctor.js",
     "skill-doctor-scan": "./lib/skill-doctor-scan.js"
@@ -16,11 +16,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xzj-abc/skill-doctor.git"
+    "url": "git+https://github.com/xigua-wang/skill-doctor.git"
   },
-  "homepage": "https://github.com/xzj-abc/skill-doctor#readme",
+  "homepage": "https://github.com/xigua-wang/skill-doctor#readme",
   "bugs": {
-    "url": "https://github.com/xzj-abc/skill-doctor/issues"
+    "url": "https://github.com/xigua-wang/skill-doctor/issues"
   },
   "scripts": {
     "scan": "node --import tsx ./scripts/scan-skills.ts --project .",

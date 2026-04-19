@@ -71,20 +71,20 @@ Skill Doctor 把 skill 当作可审查的基础设施，而不是黑盒行为。
 ### 一行启动应用
 
 ```bash
-npx skill-doctor
+npx --package @xiguawang/skill-doctor skill-doctor
 ```
 
 ### 作为 npm 包使用
 
 ```bash
-npm install -g skill-doctor
+npm install -g @xiguawang/skill-doctor
 skill-doctor
 ```
 
 或者不全局安装，直接运行：
 
 ```bash
-npx skill-doctor
+npx --package @xiguawang/skill-doctor skill-doctor
 ```
 
 默认情况下，`skill-doctor` 会：
