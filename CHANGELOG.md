@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 The project is evolving quickly, so the first entries summarize milestone snapshots rather than a long historical release train.
 
+## [0.1.3] - 2026-04-21
+
+### Changed
+
+- Reworked GitHub and npm entrypoint messaging to emphasize scan-first onboarding and clearer first-run value
+- Refreshed the dashboard hero and first-run empty state so local scans are the primary path before optional model review
+- Clarified model-assisted analysis copy across the UI and README so missing model config no longer reads like a broken setup
+- Improved settings consistency by refreshing saved form state more reliably and preserving structured server error messages
+- Updated connection testing to reuse the stored API key when the field is left blank, matching the UI behavior hint
+
 ## [0.1.2] - 2026-04-19
 
 ### Changed
