@@ -22,10 +22,12 @@
 
 </div>
 
-> Skill Doctor makes local skill systems legible. It turns hidden prompt behavior into something you can inspect, compare, and reason about before it surprises you.
+> Find the skill that actually wins, the trigger that overlaps, and the risky instruction that should not stay hidden.
 
 ## Navigate
 
+- [Why People Install It](#why-people-install-it)
+- [Quick Proof](#quick-proof)
 - [Highlights](#highlights)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -34,6 +36,37 @@
 - [Model Analysis](#model-analysis)
 - [Architecture](#architecture)
 - [Development](#development)
+
+## Why People Install It
+
+Skill Doctor is for the moment when your local agent setup stops being obvious.
+
+- "Why did Codex or OpenClaw trigger this skill instead of the other one?"
+- "Which project skill overrides the global one I thought was active?"
+- "Which skills contain shell, secret, subprocess, network, or destructive patterns?"
+- "What changed between yesterday's scan and today's workspace state?"
+
+It gives you a local inspector for precedence, conflicts, risky patterns, and scan history before those problems turn into invisible prompt behavior.
+
+## Quick Proof
+
+Run the UI for the current project:
+
+```bash
+npx --package @xiguawang/skill-doctor skill-doctor
+```
+
+Then click `Run new scan`.
+
+Without any model configuration, you can already inspect:
+
+- discovered skill roots
+- precedence winners and competing definitions
+- duplicate names and trigger overlap
+- local static risk signals
+- stored scan snapshots and history
+
+If you later configure a model provider, Skill Doctor adds summarized findings and recommendations on top of the same local scan.
 
 ## Highlights
 
@@ -193,6 +226,8 @@ For OpenClaw, Skill Doctor now discovers the standard roots above and also impor
 
 ## Screenshots
 
+The repository currently describes the key views below, but still needs committed screenshot or GIF assets. That is the next documentation upgrade for conversion.
+
 ### Overview
 
 The main dashboard is built around a single reading path: current workspace context, top-level metrics, history access, settings, and scan entry points. The hero panel keeps the product value obvious, while the right-hand summary block surfaces the current dataset and key counts without forcing the user into drawers first.
@@ -203,23 +238,23 @@ The analysis view focuses on two things side by side: model-generated findings o
 
 ## Model Analysis
 
-Each new scan includes mandatory model analysis through an OpenAI-compatible `chat/completions` endpoint.
+Skill Doctor can enrich each scan with model analysis through an OpenAI-compatible `chat/completions` endpoint.
 
 The flow is:
 
 1. Skill Doctor performs a local static scan.
 2. It builds a structured compact payload from the scan.
-3. It sends that payload to the configured model endpoint.
+3. If model configuration is present, it sends that payload to the configured model endpoint.
 4. It stores the model summary, findings, recommendations, and spotlights in the snapshot.
 
 Important details:
 
-- Configure `apiKey`, `baseUrl`, and `model` in the UI
+- Configure `apiKey`, `baseUrl`, and `model` in the UI when you want model-assisted review
 - The UI does not read back the full stored API key; it only shows configured state and a masked hint
 - The local scanner ranks skills before sending them to the model
 - UI-triggered scans request model output in the current UI language
 - CLI scans default to English and support `--analysis-language zh-CN`
-- If model config is missing or the provider fails, the scan still completes and records an analysis error
+- If model config is missing or the provider fails, the local scan still completes and records the analysis state
 
 ## Storage
 

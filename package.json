@@ -1,6 +1,6 @@
 {
   "name": "@xiguawang/skill-doctor",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "bin": {
     "skill-doctor": "lib/skill-doctor.js",
     "skill-doctor-scan": "lib/skill-doctor-scan.js"
@@ -12,7 +12,21 @@
     "README.zh-CN.md"
   ],
   "type": "module",
-  "description": "Local-first inspector for coding-agent skills, conflicts, precedence, and risk analysis.",
+  "description": "Inspect coding-agent skills, precedence, trigger overlap, and risky instructions across local and project roots.",
+  "keywords": [
+    "ai",
+    "agent",
+    "skills",
+    "codex",
+    "openclaw",
+    "claude",
+    "cursor",
+    "developer-tools",
+    "cli",
+    "local-first",
+    "prompt-audit",
+    "risk-analysis"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

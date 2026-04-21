@@ -85,8 +85,30 @@ const translations = {
     metricConflicts: 'conflicts',
     metricHighRisk: 'high risk',
     inspectorEyebrow: 'React + TypeScript Inspector',
-    heroTitle: 'Audit agent skills like infrastructure, not hidden prompt glue.',
-    heroBody: 'Skill Doctor now runs on typed scan records, typed config state, and a typed React UI over the local Node API.',
+    heroTitle: 'Scan your agent skills locally before you trust them.',
+    heroBody: 'Start with a local scan of the current project, inspect precedence and risk signals, and only add model review later if you want a second layer of analysis.',
+    scanFirstTitle: 'Start here',
+    startLocalScan: 'Start local scan',
+    scanFirstStepChoose: 'Choose the project path you want to inspect.',
+    scanFirstStepRun: 'Run a local scan and store an immutable snapshot.',
+    scanFirstStepEnhance: 'Add model review later if you want summarized findings.',
+    immediateValueTitle: 'You get this immediately',
+    immediateValueRoots: 'Discovered skill roots and likely precedence winners',
+    immediateValueConflicts: 'Duplicate names, trigger overlap, and conflict chains',
+    immediateValueRisks: 'Local shell, network, subprocess, secret, and destructive risk signals',
+    optionalModelReview: 'Optional model review',
+    modelReviewConfigured: 'Model review is configured. New scans can include AI-assisted findings.',
+    modelReviewNotConfigured: 'Model review is not configured. You can still run local scans and inspect results now.',
+    recommendedNextStep: 'Recommended next step',
+    nextStepRunFirstScan: 'Run a local scan for this project.',
+    nextStepOpenSettings: 'Open Settings only when you want AI-assisted review.',
+    nextStepReviewHistory: 'Open stored history when you want to compare earlier snapshots.',
+    firstRunEyebrow: 'First run',
+    firstRunTitle: 'No stored scans yet.',
+    firstRunBody: 'Start by scanning the current project. You can inspect your own roots, conflicts, and risk signals before switching to demo data or optional model review.',
+    firstRunPrimaryAction: 'Scan this project now',
+    firstRunSecondaryAction: 'Preview demo dataset',
+    firstRunTertiaryAction: 'Open model settings',
     useStoredHistory: 'Use stored history',
     useDemoDataset: 'Use demo dataset',
     demoDatasetGeneric: 'Generic demo',
@@ -132,9 +154,9 @@ const translations = {
     apiKeyConfiguredNo: 'Not configured',
     apiKeyLeaveBlank: 'Leave blank to keep the currently stored key unchanged.',
     noModelConfigured: 'no model configured',
-    mandatoryAnalysisHint: 'Every new scan runs through the model analysis stage. Configure the provider, base URL, model, and API key here.',
-    modelLayerEyebrow: 'Model Layer',
-    enhancedAnalysis: 'Enhanced analysis',
+    mandatoryAnalysisHint: 'Local scans work without model configuration. Configure the provider, base URL, model, and API key here when you want AI-assisted review.',
+    modelLayerEyebrow: 'Optional model layer',
+    enhancedAnalysis: 'Model-assisted review',
     missing: 'missing',
     findings: 'Findings',
     recommendations: 'Recommendations',
@@ -213,8 +235,8 @@ const translations = {
     winner: 'winner: {name}',
     noPrecedenceChains: 'No precedence chains to show.',
     analysisCompleted: 'Model analysis completed at {date}.',
-    legacyDisabled: 'This is a legacy snapshot from before model analysis became mandatory.',
-    analysisMissingConfig: 'Model analysis is mandatory, but apiKey, baseUrl, or model is missing.',
+    legacyDisabled: 'This is a legacy snapshot from before model-assisted analysis was available.',
+    analysisMissingConfig: 'Model analysis is not configured yet. Add apiKey, baseUrl, and model when you want AI-assisted review.',
     analysisFailed: 'Model analysis failed: {message}',
     noAnalysisResult: 'No model analysis result available.',
   },
@@ -248,8 +270,30 @@ const translations = {
     metricConflicts: '冲突数',
     metricHighRisk: '高风险',
     inspectorEyebrow: 'React + TypeScript 检查器',
-    heroTitle: '像审计基础设施一样审计 agent skills，而不是把它们当成隐形提示词胶水。',
-    heroBody: 'Skill Doctor 现在基于类型化扫描记录、类型化配置状态，以及运行在本地 Node API 之上的类型化 React UI。',
+    heroTitle: '先在本地扫描 agent skills，再决定是否信任它们。',
+    heroBody: '先对当前项目做本地扫描，检查优先级和风险信号；如果后面还需要第二层结论，再接入模型分析。',
+    scanFirstTitle: '先从这里开始',
+    startLocalScan: '开始本地扫描',
+    scanFirstStepChoose: '选择你想检查的项目路径。',
+    scanFirstStepRun: '执行一次本地扫描，并保存不可变快照。',
+    scanFirstStepEnhance: '如果后面需要摘要和建议，再补充模型审查。',
+    immediateValueTitle: '立刻就能得到',
+    immediateValueRoots: '发现到的 skill roots，以及可能胜出的优先级定义',
+    immediateValueConflicts: '重复名称、trigger 重叠和冲突链路',
+    immediateValueRisks: '本地 shell、network、subprocess、secret 和破坏性风险信号',
+    optionalModelReview: '可选模型审查',
+    modelReviewConfigured: '模型审查已配置，新扫描可以附带 AI 辅助发现。',
+    modelReviewNotConfigured: '当前还没配置模型审查，但你已经可以直接运行本地扫描并检查结果。',
+    recommendedNextStep: '建议下一步',
+    nextStepRunFirstScan: '先对当前项目运行一次本地扫描。',
+    nextStepOpenSettings: '只有在你需要 AI 辅助审查时，再打开设置。',
+    nextStepReviewHistory: '如果你想对比之前的快照，再打开历史记录。',
+    firstRunEyebrow: '首次使用',
+    firstRunTitle: '还没有历史扫描。',
+    firstRunBody: '先扫描当前项目，再查看你自己的 roots、冲突和风险信号。演示数据和可选模型审查可以放到后面。',
+    firstRunPrimaryAction: '立即扫描当前项目',
+    firstRunSecondaryAction: '先看演示数据',
+    firstRunTertiaryAction: '打开模型设置',
     useStoredHistory: '使用历史记录',
     useDemoDataset: '使用演示数据',
     demoDatasetGeneric: '通用演示',
@@ -295,9 +339,9 @@ const translations = {
     apiKeyConfiguredNo: '未配置',
     apiKeyLeaveBlank: '留空表示保留当前已保存的 key，不会覆盖。',
     noModelConfigured: '未配置模型',
-    mandatoryAnalysisHint: '每次新扫描都会进入模型分析阶段，请在这里配置 provider、base URL、model 和 API key。',
-    modelLayerEyebrow: '模型层',
-    enhancedAnalysis: '增强分析',
+    mandatoryAnalysisHint: '本地扫描不依赖模型配置；如果你希望获得 AI 辅助审查，再在这里配置 provider、base URL、model 和 API key。',
+    modelLayerEyebrow: '可选模型层',
+    enhancedAnalysis: '模型辅助审查',
     missing: '缺失',
     findings: '发现项',
     recommendations: '建议项',
@@ -376,8 +420,8 @@ const translations = {
     winner: '胜出者：{name}',
     noPrecedenceChains: '没有可展示的优先级链路。',
     analysisCompleted: '模型分析已于 {date} 完成。',
-    legacyDisabled: '这是模型分析强制开启之前留下的历史快照。',
-    analysisMissingConfig: '模型分析是必经阶段，但 apiKey、baseUrl 或 model 缺失。',
+    legacyDisabled: '这是模型辅助分析功能出现之前留下的历史快照。',
+    analysisMissingConfig: '当前还没有配置模型分析；如果你希望获得 AI 辅助审查，请补充 apiKey、baseUrl 和 model。',
     analysisFailed: '模型分析失败：{message}',
     noAnalysisResult: '没有可用的模型分析结果。',
   },
@@ -684,6 +728,18 @@ export default function App() {
     [t('metricConflicts'), summary.conflictCount],
     [t('metricHighRisk'), summary.highRiskSkills],
   ];
+  const isModelReviewConfigured = Boolean(config.hasApiKey && config.baseUrl.trim() && config.model.trim());
+  const isFirstRun = scans.length === 0;
+  const heroSteps = [
+    t('scanFirstStepChoose'),
+    t('scanFirstStepRun'),
+    t('scanFirstStepEnhance'),
+  ];
+  const immediateValues = [
+    t('immediateValueRoots'),
+    t('immediateValueConflicts'),
+    t('immediateValueRisks'),
+  ];
 
   return (
     <div className="app-shell">
@@ -716,7 +772,32 @@ export default function App() {
             <p className="eyebrow">{t('inspectorEyebrow')}</p>
             <h1>{t('heroTitle')}</h1>
             <p className="lede">{t('heroBody')}</p>
+            <div className="hero-onboarding">
+              <div className="hero-onboarding-card">
+                <span>{t('scanFirstTitle')}</span>
+                <ol className="hero-step-list">
+                  {heroSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+              <div className="hero-onboarding-card">
+                <span>{t('immediateValueTitle')}</span>
+                <ul className="hero-value-list">
+                  {immediateValues.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
             <div className="hero-actions">
+              <button
+                className="button primary"
+                type="button"
+                onClick={() => document.getElementById('scan-starter')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                {t('startLocalScan')}
+              </button>
               <button className="button primary" type="button" onClick={() => setSource('history')} disabled={!scans.length}>
                 {t('useStoredHistory')}
               </button>
@@ -748,16 +829,59 @@ export default function App() {
               ) : null}
               <p>{t('generatedProject', { date: formatDate(data?.generatedAt, locale), project: data?.project?.path ?? data?.scannedProject ?? t('notAvailableShort') })}</p>
             </div>
+            <div className="source-card">
+              <span>{t('optionalModelReview')}</span>
+              <strong>{isModelReviewConfigured ? t('apiKeyConfiguredYes') : t('apiKeyConfiguredNo')}</strong>
+              <p>{isModelReviewConfigured ? t('modelReviewConfigured') : t('modelReviewNotConfigured')}</p>
+            </div>
             <div className="status-line">{t(status.key, status.values)}</div>
             <div className="hero-command-card">
-              <span>{t('quickActions')}</span>
+              <span>{t('recommendedNextStep')}</span>
               <strong>{t('focusWorkspace')}</strong>
+              <p>{t('nextStepRunFirstScan')}</p>
+              <p>{isFirstRun ? t('nextStepOpenSettings') : t('nextStepReviewHistory')}</p>
               <p>{t('currentSnapshot')}: {data?.id || t('notAvailableShort')}</p>
             </div>
           </div>
         </section>
 
-        <section className="grid top-grid">
+        {isFirstRun ? (
+          <section className="panel first-run-panel">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">{t('firstRunEyebrow')}</p>
+                <h2>{t('firstRunTitle')}</h2>
+              </div>
+            </div>
+            <p className="lede">{t('firstRunBody')}</p>
+            <div className="hero-actions">
+              <button
+                className="button primary"
+                type="button"
+                onClick={() => document.getElementById('scan-starter')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                {t('firstRunPrimaryAction')}
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => setSource('demo')}
+                disabled={!activeDemoScan}
+              >
+                {t('firstRunSecondaryAction')}
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+              >
+                {t('firstRunTertiaryAction')}
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="grid top-grid" id="scan-starter">
           <div className="panel">
             <div className="section-heading">
               <div>
@@ -1205,7 +1329,15 @@ export default function App() {
           onClose={() => setIsSettingsOpen(false)}
         >
           <form
-            key={`${config.provider}-${config.baseUrl}-${config.model}-${config.scan.maxDepth}-${config.analysis.timeoutMs}-${config.analysis.maxSkills}`}
+            key={JSON.stringify({
+              provider: config.provider,
+              baseUrl: config.baseUrl,
+              model: config.model,
+              hasApiKey: config.hasApiKey,
+              apiKeyHint: config.apiKeyHint,
+              scan: config.scan,
+              analysis: config.analysis,
+            })}
             ref={settingsFormRef}
             className="form-grid compact settings-form drawer-scroll"
             onSubmit={handleSaveConfig}
@@ -1423,12 +1555,13 @@ async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T
   const response = await fetch(url, options);
   if (!response.ok) {
     const text = await response.text();
+    let parsed: { message?: string; error?: string } | null = null;
     try {
-      const parsed = JSON.parse(text) as { message?: string; error?: string };
-      throw new Error(parsed.message || parsed.error || text);
+      parsed = JSON.parse(text) as { message?: string; error?: string };
     } catch {
-      throw new Error(text);
+      parsed = null;
     }
+    throw new Error(parsed?.message || parsed?.error || text.trim() || `Request failed with status ${response.status}`);
   }
   return response.json() as Promise<T>;
 }

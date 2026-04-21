@@ -21,10 +21,12 @@
 
 </div>
 
-> Skill Doctor 的目标不是“神秘地运行更多 prompt”，而是把本地 skill 系统变成可以检查、比较、推理和治理的对象。
+> 快速找出真正生效的 skill、发生重叠的 trigger，以及不该继续隐藏的高风险指令。
 
 ## 快速导航
 
+- [为什么会安装它](#为什么会安装它)
+- [快速验证价值](#快速验证价值)
 - [功能亮点](#功能亮点)
 - [安装方式](#安装方式)
 - [快速开始](#快速开始)
@@ -33,6 +35,37 @@
 - [模型分析](#模型分析)
 - [Architecture](#architecture)
 - [开发](#开发)
+
+## 为什么会安装它
+
+Skill Doctor 适合用在这样几个时刻：你的本地 agent skill 系统已经开始变复杂，但行为不再直观。
+
+- “为什么 Codex 或 OpenClaw 触发的是这个 skill，而不是另一个？”
+- “我以为生效的是全局 skill，为什么项目里的定义把它覆盖了？”
+- “哪些 skills 里带了 shell、secret、subprocess、network 或破坏性命令模式？”
+- “昨天和今天的工作区 skill 状态到底变了什么？”
+
+它把优先级、冲突、风险模式和扫描历史都放到一个本地检查界面里，避免 skill 行为继续变成不可见的 prompt 黑盒。
+
+## 快速验证价值
+
+直接在当前项目启动 UI：
+
+```bash
+npx --package @xiguawang/skill-doctor skill-doctor
+```
+
+然后点击 `Run new scan`。
+
+即使还没有配置模型，你也已经可以检查：
+
+- 发现到了哪些 skill roots
+- 哪些定义在优先级上胜出
+- 哪些名称重复或 trigger 重叠
+- 哪些 skills 带有本地静态风险信号
+- 历史快照和扫描记录
+
+如果后面再配置模型 provider，Skill Doctor 会在同一份本地扫描结果之上补充摘要、发现项和建议项。
 
 ## 功能亮点
 
@@ -192,6 +225,8 @@ skill-doctor-scan --project . --analysis-language zh-CN
 
 ## 截图说明
 
+当前仓库已经补充了关键界面的文字说明，但还缺少已提交的真实截图或 GIF 资产。这会是下一轮文档转化优化的重点。
+
 ### 总览页
 
 主界面采用单条阅读路径：当前工作区上下文、顶层指标、历史入口、设置入口以及扫描入口都集中在首屏。左侧 hero 区强调产品价值，右侧摘要区则快速给出当前数据源和关键计数，避免用户一上来就陷入较重的抽屉或详情区域。
@@ -202,23 +237,23 @@ skill-doctor-scan --project . --analysis-language zh-CN
 
 ## 模型分析
 
-每次新扫描都会通过 OpenAI-compatible 的 `chat/completions` 接口执行强制模型分析。
+Skill Doctor 可以通过 OpenAI-compatible 的 `chat/completions` 接口，为扫描结果叠加模型分析。
 
 流程是：
 
 1. Skill Doctor 先做本地静态扫描。
 2. 再把扫描结果整理成结构化的压缩输入。
-3. 把这份输入发送到配置好的模型接口。
+3. 如果存在模型配置，就把这份输入发送到配置好的模型接口。
 4. 将模型返回的摘要、发现、建议和 spotlight 保存到快照里。
 
 关键点：
 
-- 在 UI 中配置 `apiKey`、`baseUrl` 和 `model`
+- 当你需要模型辅助审查时，在 UI 中配置 `apiKey`、`baseUrl` 和 `model`
 - UI 不会回读完整已保存 API key，只显示是否已配置和脱敏提示
 - 本地扫描器会先对 skill 做优先级排序，再交给模型
 - UI 触发的扫描会要求模型按当前界面语言返回
 - CLI 默认英文，可通过 `--analysis-language zh-CN` 切换中文
-- 如果模型配置缺失或 provider 调用失败，扫描仍会完成，只是在快照里记为分析错误
+- 如果模型配置缺失或 provider 调用失败，本地扫描仍会完成，只是在快照里记录分析状态
 
 ## 存储位置
 

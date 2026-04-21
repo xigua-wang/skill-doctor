@@ -13,7 +13,7 @@ export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, 
       provider: config.provider || 'openai-compatible',
       model,
       reason: 'missing_config',
-      message: 'Model analysis is mandatory, but apiKey, baseUrl, or model is missing.',
+      message: 'Model analysis is not configured yet. Add apiKey, baseUrl, and model to enable AI-assisted review.',
     };
   }
 

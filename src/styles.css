@@ -56,6 +56,35 @@ button, input, select { font: inherit; }
 h1 { margin: 0 0 14px; max-width: 12ch; line-height: 0.93; font-size: clamp(2.8rem, 5vw, 5rem); letter-spacing: -0.07em; }
 h2, h3, p { margin-top: 0; }
 .lede { max-width: 66ch; color: var(--muted); line-height: 1.7; }
+.hero-onboarding {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.hero-onboarding-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+}
+.hero-onboarding-card > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.hero-step-list,
+.hero-value-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+  color: var(--text);
+  line-height: 1.6;
+}
 .hero-actions, .filters, .form-actions, .badges, .tags, .compatibility, .inline-list, .history-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .button { border: 1px solid var(--line); border-radius: 999px; padding: 12px 18px; cursor: pointer; color: var(--text); background: transparent; transition: transform 140ms ease, border-color 140ms ease, background 140ms ease; }
 .button:hover:not(:disabled) { transform: translateY(-1px); }
@@ -70,6 +99,18 @@ h2, h3, p { margin-top: 0; }
 .source-card, .status-line { border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); line-height: 1.6; }
 .source-card strong { color: var(--text); display: block; margin: 6px 0; }
 .status-line { color: var(--accent); }
+.first-run-panel {
+  display: grid;
+  gap: 14px;
+  border-color: rgba(130, 245, 141, 0.2);
+  background:
+    linear-gradient(135deg, rgba(130, 245, 141, 0.08), rgba(127, 212, 255, 0.04)),
+    var(--panel);
+}
+.first-run-panel .lede {
+  max-width: 88ch;
+  margin-bottom: 0;
+}
 .hero-command-card {
   border-top: 1px solid var(--line);
   padding-top: 16px;
@@ -315,6 +356,7 @@ textarea {
 .drawer-filters { margin-bottom: 16px; }
 @media (max-width: 1100px) {
   .hero, .top-grid, .lower-grid, .bottom-grid { grid-template-columns: 1fr; }
+  .hero-onboarding { grid-template-columns: 1fr; }
   .form-grid.compact { grid-template-columns: 1fr; }
   .history-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail-panel { position: static; }

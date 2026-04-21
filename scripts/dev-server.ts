@@ -82,21 +82,27 @@ async function handleApi(request: http.IncomingMessage, response: http.ServerRes
   }
   if (request.method === 'POST' && url.pathname === '/api/config/test-connection') {
     const body = await readBody<Partial<AppConfig>>(request);
+    const stored = await readConfig(appHome);
     const candidate: AppConfig = {
-      provider: `${body.provider || ''}`.trim(),
-      baseUrl: `${body.baseUrl || ''}`.trim(),
-      model: `${body.model || ''}`.trim(),
-      apiKey: `${body.apiKey || ''}`.trim(),
+      ...stored,
+      provider: typeof body.provider === 'string' ? body.provider.trim() : stored.provider,
+      baseUrl: typeof body.baseUrl === 'string' ? body.baseUrl.trim() : stored.baseUrl,
+      model: typeof body.model === 'string' ? body.model.trim() : stored.model,
+      apiKey: typeof body.apiKey === 'string' && body.apiKey.trim() ? body.apiKey.trim() : stored.apiKey,
       scan: {
-        maxDepth: Number(body.scan?.maxDepth || 5),
-        includeProjectRoots: body.scan?.includeProjectRoots !== false,
-        includeGlobalRoots: body.scan?.includeGlobalRoots !== false,
-        enableFallbackDiscovery: body.scan?.enableFallbackDiscovery !== false,
-        extraRoots: body.scan?.extraRoots || [],
+        ...stored.scan,
+        ...(body.scan || {}),
+        maxDepth: Number(body.scan?.maxDepth ?? stored.scan.maxDepth),
+        includeProjectRoots: body.scan?.includeProjectRoots ?? stored.scan.includeProjectRoots,
+        includeGlobalRoots: body.scan?.includeGlobalRoots ?? stored.scan.includeGlobalRoots,
+        enableFallbackDiscovery: body.scan?.enableFallbackDiscovery ?? stored.scan.enableFallbackDiscovery,
+        extraRoots: body.scan?.extraRoots ?? stored.scan.extraRoots,
       },
       analysis: {
-        timeoutMs: Number(body.analysis?.timeoutMs || 20000),
-        maxSkills: Number(body.analysis?.maxSkills || 12),
+        ...stored.analysis,
+        ...(body.analysis || {}),
+        timeoutMs: Number(body.analysis?.timeoutMs ?? stored.analysis.timeoutMs),
+        maxSkills: Number(body.analysis?.maxSkills ?? stored.analysis.maxSkills),
       },
     };
     sendJson(response, 200, await testModelConnection(candidate));
