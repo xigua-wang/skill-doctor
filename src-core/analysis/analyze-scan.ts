@@ -1,6 +1,13 @@
 import type { AppConfig, AppLocale, ConclusionPrompt, ConclusionPromptSet, ScanAnalysis, ScanRecord, SkillSpotlight } from '../types.ts';
 import { compareSkillsForAnalysis, getSkillLocalPriority } from './local-priority.ts';
 
+type AnalysisProgressEvent =
+  | { phase: 'core_started' }
+  | { phase: 'core_completed'; analysis: Pick<ScanAnalysis, 'summary' | 'findings' | 'recommendations' | 'skillSpotlights'> }
+  | { phase: 'prompts_started' }
+  | { phase: 'prompts_completed'; conclusionPrompts: ConclusionPromptSet }
+  | { phase: 'prompts_fallback'; message: string; conclusionPrompts: ConclusionPromptSet };
+
 export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, responseLanguage: AppLocale = 'en'): Promise<ScanAnalysis> {
   const apiKey = config.apiKey.trim();
   const baseUrl = config.baseUrl.trim().replace(/\/$/, '');
@@ -17,9 +24,131 @@ export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, 
     };
   }
 
+  return analyzeScanWithProgress(scan, config, responseLanguage);
+}
+
+export async function analyzeScanWithProgress(
+  scan: ScanRecord,
+  config: AppConfig,
+  responseLanguage: AppLocale = 'en',
+  onProgress?: (event: AnalysisProgressEvent) => void,
+): Promise<ScanAnalysis> {
+  const provider = config.provider || 'openai-compatible';
+  const apiKey = config.apiKey.trim();
+  const baseUrl = config.baseUrl.trim().replace(/\/$/, '');
+  const model = config.model.trim();
+  if (!apiKey || !baseUrl || !model) {
+    return {
+      status: 'error',
+      generatedAt: new Date().toISOString(),
+      provider,
+      model,
+      reason: 'missing_config',
+      message: 'Model analysis is not configured yet. Add apiKey, baseUrl, and model to enable AI-assisted review.',
+    };
+  }
   const timeoutMs = Number(config.analysis.timeoutMs || 20000);
+  const generatedAt = new Date().toISOString();
+
+  onProgress?.({ phase: 'core_started' });
+  const coreResult = await requestModelJson(config, buildCoreAnalysisMessages(scan, config, responseLanguage), {
+    timeoutMs,
+    temperature: 0.2,
+  });
+
+  if (!coreResult.ok) {
+    return {
+      status: 'error',
+      generatedAt,
+      provider,
+      model,
+      reason: coreResult.reason,
+      message: coreResult.message,
+    };
+  }
+
+  const normalizedCore = normalizeCoreAnalysisOutput(safeParseJson(coreResult.content), scan);
+  onProgress?.({
+    phase: 'core_completed',
+    analysis: {
+      summary: normalizedCore.summary,
+      findings: normalizedCore.findings,
+      recommendations: normalizedCore.recommendations,
+      skillSpotlights: normalizedCore.skillSpotlights,
+    },
+  });
+
+  onProgress?.({ phase: 'prompts_started' });
+  const promptsResult = await requestModelJson(
+    config,
+    buildConclusionPromptMessages(scan, normalizedCore, responseLanguage),
+    {
+      timeoutMs,
+      temperature: 0.2,
+    },
+  );
+
+  let conclusionPrompts: ConclusionPromptSet;
+  let promptPhaseReason: string | undefined;
+  let promptPhaseMessage: string | undefined;
+  let promptUsage: unknown = null;
+
+  if (promptsResult.ok) {
+    conclusionPrompts = normalizeConclusionPrompts(
+      safeParseJson(promptsResult.content),
+      scan,
+      normalizedCore.findings,
+      normalizedCore.recommendations,
+      responseLanguage,
+    );
+    promptUsage = promptsResult.usage || null;
+    onProgress?.({ phase: 'prompts_completed', conclusionPrompts });
+  } else {
+    conclusionPrompts = createFallbackConclusionPrompts(scan, responseLanguage, normalizedCore);
+    promptPhaseReason = promptsResult.reason;
+    promptPhaseMessage = promptsResult.message;
+    onProgress?.({
+      phase: 'prompts_fallback',
+      message: promptsResult.message,
+      conclusionPrompts,
+    });
+  }
+
+  return {
+    status: 'completed',
+    generatedAt,
+    provider,
+    model,
+    summary: normalizedCore.summary,
+    findings: normalizedCore.findings,
+    recommendations: normalizedCore.recommendations,
+    skillSpotlights: normalizedCore.skillSpotlights,
+    conclusionPrompts,
+    raw: {
+      usage: {
+        core: coreResult.usage || null,
+        prompts: promptUsage,
+        promptPhaseReason,
+        promptPhaseMessage,
+      },
+    },
+  };
+}
+
+async function requestModelJson(
+  config: AppConfig,
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+  options: { timeoutMs: number; temperature: number; maxCompletionTokens?: number },
+): Promise<
+  | { ok: true; content: string; usage?: unknown }
+  | { ok: false; reason: 'timeout' | 'request_failed' | 'http_error'; message: string }
+> {
+  const apiKey = config.apiKey.trim();
+  const baseUrl = config.baseUrl.trim().replace(/\/$/, '');
+  const model = config.model.trim();
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
 
   try {
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -30,9 +159,10 @@ export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, 
       },
       body: JSON.stringify({
         model,
-        temperature: 0.2,
+        temperature: options.temperature,
         response_format: { type: 'json_object' },
-        messages: buildMessages(scan, config, responseLanguage),
+        ...(options.maxCompletionTokens ? { max_completion_tokens: options.maxCompletionTokens } : {}),
+        messages,
       }),
       signal: controller.signal,
     });
@@ -40,41 +170,27 @@ export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, 
     if (!response.ok) {
       const text = await response.text();
       return {
-        status: 'error',
-        generatedAt: new Date().toISOString(),
-        provider: config.provider || 'openai-compatible',
-        model,
+        ok: false,
         reason: 'http_error',
         message: text.slice(0, 800),
       };
     }
 
     const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content || '{}';
-    const parsed = safeParseJson(content);
-    const normalized = normalizeAnalysisOutput(parsed, scan, responseLanguage);
     return {
-      status: 'completed',
-      generatedAt: new Date().toISOString(),
-      provider: config.provider || 'openai-compatible',
-      model,
-      summary: normalized.summary,
-      findings: normalized.findings,
-      recommendations: normalized.recommendations,
-      skillSpotlights: normalized.skillSpotlights,
-      conclusionPrompts: normalized.conclusionPrompts,
-      raw: {
-        usage: data?.usage || null,
-      },
+      ok: true,
+      content: data?.choices?.[0]?.message?.content || '{}',
+      usage: data?.usage || null,
     };
   } catch (error) {
+    const failure = normalizeRequestFailure(error, options.timeoutMs, {
+      timeout: `Model analysis timed out after ${formatTimeoutSeconds(options.timeoutMs)}. Increase Analysis timeout ms or use a faster model/provider endpoint.`,
+      fallback: 'Model analysis failed.',
+    });
     return {
-      status: 'error',
-      generatedAt: new Date().toISOString(),
-      provider: config.provider || 'openai-compatible',
-      model,
-      reason: error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'request_failed',
-      message: error instanceof Error ? error.message : 'Unknown analysis error.',
+      ok: false,
+      reason: failure.reason,
+      message: failure.message,
     };
   } finally {
     clearTimeout(timeout);
@@ -89,8 +205,9 @@ export async function testModelConnection(config: AppConfig): Promise<{ ok: bool
     return { ok: false, status: 'missing_config', message: 'apiKey, baseUrl, or model is missing.', model };
   }
 
+  const timeoutMs = Number(config.analysis.timeoutMs || 20000);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.analysis.timeoutMs || 20000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -119,10 +236,14 @@ export async function testModelConnection(config: AppConfig): Promise<{ ok: bool
     const data = await response.json();
     return { ok: true, status: 'connected', message: 'Connection test succeeded.', model, usage: data?.usage || null };
   } catch (error) {
+    const failure = normalizeRequestFailure(error, timeoutMs, {
+      timeout: `Connection test timed out after ${formatTimeoutSeconds(timeoutMs)}. Increase Analysis timeout ms or use a faster model/provider endpoint.`,
+      fallback: 'Connection test failed.',
+    });
     return {
       ok: false,
-      status: error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'request_failed',
-      message: error instanceof Error ? error.message : 'Connection test failed.',
+      status: failure.reason,
+      message: failure.message,
       model,
     };
   } finally {
@@ -130,7 +251,34 @@ export async function testModelConnection(config: AppConfig): Promise<{ ok: bool
   }
 }
 
-function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: AppLocale) {
+function normalizeRequestFailure(
+  error: unknown,
+  timeoutMs: number,
+  messages: { timeout: string; fallback: string },
+): { reason: 'timeout' | 'request_failed'; message: string } {
+  if (error instanceof Error && error.name === 'AbortError') {
+    return {
+      reason: 'timeout',
+      message: messages.timeout,
+    };
+  }
+
+  return {
+    reason: 'request_failed',
+    message: error instanceof Error && error.message ? error.message : messages.fallback,
+  };
+}
+
+function formatTimeoutSeconds(timeoutMs: number): string {
+  const seconds = timeoutMs / 1000;
+  return Number.isInteger(seconds) ? `${seconds}s` : `${seconds.toFixed(1)}s`;
+}
+
+function buildCoreAnalysisMessages(
+  scan: ScanRecord,
+  config: AppConfig,
+  responseLanguage: AppLocale,
+): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
   const sampleSkills = [...scan.skills]
     .sort(compareSkillsForAnalysis)
     .slice(0, Number(config.analysis.maxSkills || 12))
@@ -343,31 +491,6 @@ function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: Ap
             rationale: 'It combines the highest local priority with direct command-execution risk, so it has the strongest effect on the workspace safety boundary.',
           },
         ],
-    conclusionPrompts: responseLanguage === 'zh-CN'
-      ? {
-          contentOptimization: {
-            title: 'Skill 内容优化 Prompt',
-            intent: '给另一个模型使用，让它基于扫描结果优化 skill 内容结构与指令质量。',
-            prompt: '你是资深 agent skill 架构师。请根据以下扫描结论，重写高风险和重叠 skill，优化描述、trigger、边界条件、约束、防护和输出格式，并返回修改后的 skill 草案与修改理由。',
-          },
-          priorityOptimization: {
-            title: 'Skill 权重优化 Prompt',
-            intent: '给另一个模型使用，让它基于扫描结果优化 skill 权重、优先级、拆分和合并策略。',
-            prompt: '你是资深 agent skill 架构师。请根据以下扫描结论，判断哪些 skill 应提升、降低、拆分、合并或调整 precedence，减少 trigger 重叠与隐藏覆盖，并返回具体排序建议和依据。',
-          },
-        }
-      : {
-          contentOptimization: {
-            title: 'Skill Content Optimization Prompt',
-            intent: 'Use this with another model to improve the structure and instruction quality of skill content from the scan.',
-            prompt: 'You are a senior agent-skill architect. Use the scan findings below to rewrite risky and overlapping skills, improve descriptions, triggers, boundaries, guardrails, and output contracts, then return revised skill drafts and rationale for each change.',
-          },
-          priorityOptimization: {
-            title: 'Skill Priority Optimization Prompt',
-            intent: 'Use this with another model to optimize skill weighting, precedence, split, and merge decisions from the scan.',
-            prompt: 'You are a senior agent-skill architect. Use the scan findings below to determine which skills should move up, move down, split, merge, or change precedence, reduce trigger overlap and hidden overrides, then return concrete ordering changes with rationale.',
-          },
-        },
   };
 
   return [
@@ -386,13 +509,9 @@ function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: Ap
         'Each spotlight rationale must explain why this skill matters in the context of the workspace, not just repeat its name.',
         'Avoid duplicate findings or recommendations phrased in slightly different words.',
         'Return strict json only.',
-        'Also produce two reusable optimization prompts: one for skill content optimization and one for skill weighting or precedence optimization.',
-        'json keys must be exactly: summary, findings, recommendations, skillSpotlights, conclusionPrompts.',
+        'json keys must be exactly: summary, findings, recommendations, skillSpotlights.',
         'findings and recommendations must be arrays of short strings.',
         'skillSpotlights must be an array of objects with keys skillId, label, rationale.',
-        'conclusionPrompts must be an object with keys contentOptimization and priorityOptimization.',
-        'Each prompt object must have keys title, intent, prompt.',
-        'Each prompt must be a practical multi-step prompt that another model can execute directly.',
         languageInstruction(responseLanguage),
       ].join(' '),
     },
@@ -417,10 +536,79 @@ function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: Ap
         '- findings: 2 to 6 concrete findings',
         '- recommendations: 2 to 6 concrete actions',
         '- skillSpotlights: up to 3 items',
-        '- conclusionPrompts: two reusable prompts, one for content optimization and one for priority optimization',
         'When choosing findings and recommendations, emphasize what is highest risk, highest impact, or most likely to create confusing agent behavior.',
         'Do not mention data that is absent from the scan.',
         `Scan payload: ${JSON.stringify(compactScan)}`,
+      ].join(' '),
+    },
+  ];
+}
+
+function buildConclusionPromptMessages(
+  scan: ScanRecord,
+  analysis: Pick<ScanAnalysis, 'summary' | 'findings' | 'recommendations' | 'skillSpotlights'>,
+  responseLanguage: AppLocale,
+) {
+  const payload = {
+    project: scan.project,
+    generatedAt: scan.generatedAt,
+    summary: scan.summary,
+    topRiskSkills: buildTopRiskSkills(scan),
+    topConflictTriggers: buildTopConflictTriggers(scan),
+    precedenceHotspots: buildPrecedenceHotspots(scan),
+    analysis,
+  };
+
+  const exampleOutput = responseLanguage === 'zh-CN'
+    ? {
+        contentOptimization: {
+          title: 'Skill 内容优化 Prompt',
+          intent: '给另一个模型使用，让它基于扫描结果优化 skill 内容结构与指令质量。',
+          prompt: '你是资深 agent skill 架构师。请根据以下扫描结论，重写高风险和重叠 skill，优化描述、trigger、边界条件、约束、防护和输出格式，并返回修改后的 skill 草案与修改理由。',
+        },
+        priorityOptimization: {
+          title: 'Skill 权重优化 Prompt',
+          intent: '给另一个模型使用，让它基于扫描结果优化 skill 权重、优先级、拆分和合并策略。',
+          prompt: '你是资深 agent skill 架构师。请根据以下扫描结论，判断哪些 skill 应提升、降低、拆分、合并或调整 precedence，减少 trigger 重叠与隐藏覆盖，并返回具体排序建议和依据。',
+        },
+      }
+    : {
+        contentOptimization: {
+          title: 'Skill Content Optimization Prompt',
+          intent: 'Use this with another model to improve the structure and instruction quality of skill content from the scan.',
+          prompt: 'You are a senior agent-skill architect. Use the scan findings below to rewrite risky and overlapping skills, improve descriptions, triggers, boundaries, guardrails, and output contracts, then return revised skill drafts and rationale for each change.',
+        },
+        priorityOptimization: {
+          title: 'Skill Priority Optimization Prompt',
+          intent: 'Use this with another model to optimize skill weighting, precedence, split, and merge decisions from the scan.',
+          prompt: 'You are a senior agent-skill architect. Use the scan findings below to determine which skills should move up, move down, split, merge, or change precedence, reduce trigger overlap and hidden overrides, then return concrete ordering changes with rationale.',
+        },
+      };
+
+  return [
+    {
+      role: 'system' as const,
+      content: [
+        'You are a senior reviewer for coding-agent skill systems.',
+        'Your task is to turn a completed scan analysis into two reusable optimization prompts.',
+        'Use only the provided scan and analysis data.',
+        'Return strict json only.',
+        'json keys must be exactly: contentOptimization, priorityOptimization.',
+        'Each prompt object must have keys title, intent, prompt.',
+        'Each prompt must be a practical multi-step prompt that another model can execute directly.',
+        languageInstruction(responseLanguage),
+      ].join(' '),
+    },
+    {
+      role: 'assistant' as const,
+      content: JSON.stringify(exampleOutput),
+    },
+    {
+      role: 'user' as const,
+      content: [
+        'Generate reusable optimization prompts from this scan analysis.',
+        languageInstruction(responseLanguage),
+        `Scan and analysis payload: ${JSON.stringify(payload)}`,
       ].join(' '),
     },
   ];
@@ -561,7 +749,7 @@ function countBy<T>(items: T[], keyOf: (item: T) => string) {
   }, {});
 }
 
-function normalizeAnalysisOutput(parsed: Record<string, unknown>, scan: ScanRecord, responseLanguage: AppLocale) {
+function normalizeCoreAnalysisOutput(parsed: Record<string, unknown>, scan: ScanRecord) {
   const validSkillIds = new Set(scan.skills.map((skill) => skill.id));
   const findings = normalizeEvidenceList(parsed.findings, 6);
   const recommendations = normalizeEvidenceList(parsed.recommendations, 6);
@@ -570,7 +758,6 @@ function normalizeAnalysisOutput(parsed: Record<string, unknown>, scan: ScanReco
     findings,
     recommendations,
     skillSpotlights: normalizeSkillSpotlights(parsed.skillSpotlights, validSkillIds),
-    conclusionPrompts: normalizeConclusionPrompts(parsed.conclusionPrompts, scan, findings, recommendations, responseLanguage),
   };
 }
 

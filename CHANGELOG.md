@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 The project is evolving quickly, so the first entries summarize milestone snapshots rather than a long historical release train.
 
+## [0.1.5] - 2026-04-22
+
+### Changed
+
+- Reworked interactive scans to stream staged progress from the local server instead of blocking until the full model response completes
+- Split model-assisted review into a core analysis phase and a separate conclusion-prompt phase to reduce timeout risk from oversized responses
+- Added prompt-generation fallback handling so scans still complete with local conclusion templates when the second model phase fails
+- Normalized timeout and aborted-request messaging so the UI shows actionable analysis and connection-test failures instead of raw runtime abort text
+
 ## [0.1.3] - 2026-04-21
 
 ### Changed

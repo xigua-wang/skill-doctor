@@ -1,6 +1,6 @@
 {
   "name": "@xiguawang/skill-doctor",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "bin": {
     "skill-doctor": "lib/skill-doctor.js",
     "skill-doctor-scan": "lib/skill-doctor-scan.js"

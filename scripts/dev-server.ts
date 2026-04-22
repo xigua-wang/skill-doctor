@@ -6,8 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildScan } from '../src-core/scanner/scan-engine.ts';
-import { testModelConnection } from '../src-core/analysis/analyze-scan.ts';
+import { analyzeScanWithProgress, testModelConnection } from '../src-core/analysis/analyze-scan.ts';
+import { buildLocalScan, buildScan } from '../src-core/scanner/scan-engine.ts';
 import type { AppConfig, AppLocale } from '../src-core/types.ts';
 import { readConfig, sanitizeConfig, writeConfig } from '../src-core/storage/config-store.ts';
 import { deleteScan, listScans, readLatestScan, readScan, saveScan } from '../src-core/storage/scan-store.ts';
@@ -118,6 +118,17 @@ async function handleApi(request: http.IncomingMessage, response: http.ServerRes
     sendJson(response, 200, latest);
     return;
   }
+  if (request.method === 'POST' && url.pathname === '/api/scans/stream') {
+    const body = await readBody<{ projectPath?: string; analysisLanguage?: AppLocale }>(request);
+    const requestedProjectDir = path.resolve(body.projectPath || projectDir);
+    const config = await readConfig(appHome);
+    await streamScan(response, {
+      projectDir: requestedProjectDir,
+      config,
+      analysisLanguage: body.analysisLanguage === 'zh-CN' ? 'zh-CN' : 'en',
+    });
+    return;
+  }
   if (request.method === 'POST' && url.pathname === '/api/scans') {
     const body = await readBody<{ projectPath?: string; analysisLanguage?: AppLocale }>(request);
     const requestedProjectDir = path.resolve(body.projectPath || projectDir);
@@ -154,6 +165,69 @@ async function handleApi(request: http.IncomingMessage, response: http.ServerRes
     }
   }
   sendJson(response, 404, { error: 'not_found' });
+}
+
+async function streamScan(
+  response: http.ServerResponse,
+  input: { projectDir: string; config: AppConfig; analysisLanguage: AppLocale },
+): Promise<void> {
+  response.writeHead(200, {
+    'Content-Type': 'application/x-ndjson; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+  });
+
+  try {
+    sendStreamEvent(response, { type: 'scan_started', projectPath: input.projectDir });
+    const localScan = await buildLocalScan({
+      projectDir: input.projectDir,
+      homeDir: os.homedir(),
+      config: input.config,
+    });
+    sendStreamEvent(response, {
+      type: 'local_scan_completed',
+      scan: localScan,
+    });
+
+    const analysis = await analyzeScanWithProgress(localScan, input.config, input.analysisLanguage, (event) => {
+      if (event.phase === 'core_started') {
+        sendStreamEvent(response, { type: 'analysis_phase', phase: 'core_started' });
+        return;
+      }
+      if (event.phase === 'core_completed') {
+        sendStreamEvent(response, { type: 'analysis_phase', phase: 'core_completed', analysis: event.analysis });
+        return;
+      }
+      if (event.phase === 'prompts_started') {
+        sendStreamEvent(response, { type: 'analysis_phase', phase: 'prompts_started' });
+        return;
+      }
+      if (event.phase === 'prompts_completed') {
+        sendStreamEvent(response, { type: 'analysis_phase', phase: 'prompts_completed', conclusionPrompts: event.conclusionPrompts });
+        return;
+      }
+      sendStreamEvent(response, {
+        type: 'analysis_phase',
+        phase: 'prompts_fallback',
+        message: event.message,
+        conclusionPrompts: event.conclusionPrompts,
+      });
+    });
+
+    const storedScan = await saveScan({ ...localScan, analysis }, appHome);
+    sendStreamEvent(response, { type: 'scan_completed', scan: storedScan });
+  } catch (error) {
+    sendStreamEvent(response, {
+      type: 'scan_failed',
+      message: error instanceof Error ? error.message : 'Scan failed.',
+    });
+  } finally {
+    response.end();
+  }
+}
+
+function sendStreamEvent(response: http.ServerResponse, value: unknown): void {
+  response.write(`${JSON.stringify(value)}\n`);
 }
 
 async function serveStatic(pathname: string, response: http.ServerResponse): Promise<void> {

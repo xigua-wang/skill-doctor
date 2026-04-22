@@ -9,6 +9,12 @@ import { exists, safeRead } from '../storage/fs-utils.ts';
 import { discoverRoots } from './discover-roots.ts';
 
 export async function buildScan(input: { projectDir: string; homeDir: string; config: AppConfig; scannerVersion?: string; analysisLanguage?: AppLocale }): Promise<ScanRecord> {
+  const scan = await buildLocalScan(input);
+  scan.analysis = await analyzeScanWithModel(scan, input.config, input.analysisLanguage || 'en');
+  return scan;
+}
+
+export async function buildLocalScan(input: { projectDir: string; homeDir: string; config: AppConfig; scannerVersion?: string }): Promise<ScanRecord> {
   const scannerVersion = input.scannerVersion || '0.2.0';
   const discoveredRoots = await discoverRoots({ projectDir: input.projectDir, homeDir: input.homeDir, config: input.config });
   const existingRoots: RootCandidate[] = [];
@@ -60,7 +66,6 @@ export async function buildScan(input: { projectDir: string; homeDir: string; co
     },
   };
 
-  scan.analysis = await analyzeScanWithModel(scan, input.config, input.analysisLanguage || 'en');
   return scan;
 }
 

@@ -53,6 +53,18 @@ type LoadScanOptions = {
 };
 
 type DemoDatasetKey = 'default' | 'openclaw';
+type StreamScanEvent =
+  | { type: 'scan_started'; projectPath: string }
+  | { type: 'local_scan_completed'; scan: ScanRecord }
+  | {
+      type: 'analysis_phase';
+      phase: 'core_started' | 'core_completed' | 'prompts_started' | 'prompts_completed' | 'prompts_fallback';
+      analysis?: Pick<ScanAnalysis, 'summary' | 'findings' | 'recommendations' | 'skillSpotlights'>;
+      conclusionPrompts?: ScanAnalysis['conclusionPrompts'];
+      message?: string;
+    }
+  | { type: 'scan_completed'; scan: ScanRecord }
+  | { type: 'scan_failed'; message: string };
 
 const translations = {
   en: {
@@ -74,13 +86,21 @@ const translations = {
     loadedSnapshot: 'Loaded snapshot {id}.',
     failedSnapshot: 'Failed to load snapshot {id}.',
     runningScan: 'Running scan and storing immutable snapshot…',
+    localScanCompleted: 'Local scan completed. Starting staged model review…',
+    analysisCoreRunning: 'Model review is generating summary, findings, and spotlights…',
+    analysisPromptsRunning: 'Core review completed. Generating reusable conclusion prompts…',
+    analysisPromptsFallback: 'Core review completed. Prompt generation fell back to local templates: {message}',
     createdSnapshot: 'Created snapshot {id}.',
+    createdSnapshotWithAnalysisError: 'Created snapshot {id}, but model analysis failed: {message}',
+    createdSnapshotWithPromptFallback: 'Created snapshot {id}. Core review completed, and conclusion prompts used local fallback templates.',
+    scanFailed: 'Scan failed: {message}',
     deleteConfirm: 'Delete scan {id}?',
     deletedSnapshot: 'Deleted snapshot {id}.',
     savedConfig: 'Saved global configuration to ~/.skill-doctor/config.json.',
     testingConnection: 'Testing model connection…',
     connectionOk: 'Model connection test succeeded.',
     connectionFail: 'Model connection test failed: {message}',
+    connectionTimedOut: 'Model connection test timed out after {seconds}s. Increase Analysis timeout ms or use a faster model/provider endpoint.',
     copiedPrompt: 'Copied {label} prompt.',
     copyPromptFailed: 'Failed to copy prompt: {message}',
     copyAllPrompts: 'Copy all',
@@ -247,6 +267,7 @@ const translations = {
     legacyDisabled: 'This is a legacy snapshot from before model-assisted analysis was available.',
     analysisMissingConfig: 'Model analysis is not configured yet. Add apiKey, baseUrl, and model when you want AI-assisted review.',
     analysisFailed: 'Model analysis failed: {message}',
+    analysisTimedOut: 'Model analysis timed out after {seconds}s. Increase Analysis timeout ms or use a faster model/provider endpoint.',
     noAnalysisResult: 'No model analysis result available.',
     noConclusionPrompt: 'No conclusion prompts are available for this snapshot.',
     copy: 'Copy',
@@ -271,13 +292,21 @@ const translations = {
     loadedSnapshot: '已加载快照 {id}。',
     failedSnapshot: '加载快照 {id} 失败。',
     runningScan: '正在执行扫描并保存不可变快照…',
+    localScanCompleted: '本地扫描已完成，正在开始分阶段模型审查…',
+    analysisCoreRunning: '模型审查正在生成摘要、发现项和聚焦结论…',
+    analysisPromptsRunning: '核心审查已完成，正在生成可复用结论 Prompts…',
+    analysisPromptsFallback: '核心审查已完成，结论 Prompt 生成失败，已回退到本地模板：{message}',
     createdSnapshot: '已创建快照 {id}。',
+    createdSnapshotWithAnalysisError: '已创建快照 {id}，但模型分析失败：{message}',
+    createdSnapshotWithPromptFallback: '已创建快照 {id}。核心审查已完成，结论 Prompt 已回退到本地模板。',
+    scanFailed: '扫描失败：{message}',
     deleteConfirm: '确认删除扫描 {id} 吗？',
     deletedSnapshot: '已删除快照 {id}。',
     savedConfig: '已将全局配置保存到 ~/.skill-doctor/config.json。',
     testingConnection: '正在测试模型连接…',
     connectionOk: '模型连接测试成功。',
     connectionFail: '模型连接测试失败：{message}',
+    connectionTimedOut: '模型连接测试在 {seconds}s 后超时。请增大“分析超时毫秒数”，或改用更快的模型或 provider 接口。',
     copiedPrompt: '已复制 {label} prompt。',
     copyPromptFailed: '复制 prompt 失败：{message}',
     copyAllPrompts: '全部复制',
@@ -444,6 +473,7 @@ const translations = {
     legacyDisabled: '这是模型辅助分析功能出现之前留下的历史快照。',
     analysisMissingConfig: '当前还没有配置模型分析；如果你希望获得 AI 辅助审查，请补充 apiKey、baseUrl 和 model。',
     analysisFailed: '模型分析失败：{message}',
+    analysisTimedOut: '模型分析在 {seconds}s 后超时。请增大“分析超时毫秒数”，或改用更快的模型或 provider 接口。',
     noAnalysisResult: '没有可用的模型分析结果。',
     noConclusionPrompt: '当前快照没有可用的结论 Prompts。',
     copy: '复制',
@@ -666,18 +696,112 @@ export default function App() {
     event.preventDefault();
     setIsBusy(true);
     setStatus({ key: 'runningScan' });
+    let finalScanId: string | null = null;
+    let finalScanRecord: ScanRecord | null = null;
     try {
-      const record = await requestJson<ScanRecord>('/api/scans', {
+      await streamJsonLines<StreamScanEvent>('/api/scans/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectPath: scanTarget || '.', analysisLanguage: locale }),
+      }, (event) => {
+        if (event.type === 'scan_started') {
+          setStatus({ key: 'runningScan' });
+          return;
+        }
+        if (event.type === 'local_scan_completed') {
+          setCurrentScan(event.scan);
+          setScanLoadError(null);
+          setSource('history');
+          setStatus({ key: 'localScanCompleted' });
+          return;
+        }
+        if (event.type === 'analysis_phase') {
+          if (event.phase === 'core_started') {
+            setStatus({ key: 'analysisCoreRunning' });
+            return;
+          }
+          if (event.phase === 'core_completed') {
+            setCurrentScan((current) => current ? {
+              ...current,
+              analysis: {
+                ...current.analysis,
+                status: 'completed',
+                generatedAt: current.analysis.generatedAt || current.generatedAt,
+                summary: event.analysis?.summary,
+                findings: event.analysis?.findings,
+                recommendations: event.analysis?.recommendations,
+                skillSpotlights: event.analysis?.skillSpotlights,
+              },
+            } : current);
+            setStatus({ key: 'analysisPromptsRunning' });
+            return;
+          }
+          if (event.phase === 'prompts_started') {
+            setStatus({ key: 'analysisPromptsRunning' });
+            return;
+          }
+          if (event.phase === 'prompts_fallback') {
+            setCurrentScan((current) => current ? {
+              ...current,
+              analysis: {
+                ...current.analysis,
+                status: 'completed',
+                generatedAt: current.analysis.generatedAt || current.generatedAt,
+                conclusionPrompts: event.conclusionPrompts,
+              },
+            } : current);
+            setStatus({ key: 'analysisPromptsFallback', values: { message: event.message || 'unknown error' } });
+            return;
+          }
+          if (event.phase === 'prompts_completed') {
+            setCurrentScan((current) => current ? {
+              ...current,
+              analysis: {
+                ...current.analysis,
+                status: 'completed',
+                generatedAt: current.analysis.generatedAt || current.generatedAt,
+                conclusionPrompts: event.conclusionPrompts,
+              },
+            } : current);
+          }
+          return;
+        }
+        if (event.type === 'scan_completed') {
+          finalScanId = event.scan.id;
+          finalScanRecord = event.scan;
+          setCurrentScan(event.scan);
+          setScanLoadError(null);
+          setSource('history');
+          return;
+        }
+        if (event.type === 'scan_failed') {
+          throw new Error(event.message);
+        }
       });
       const scansData = await requestJson<ScanListItem[]>('/api/scans');
       setScans(scansData);
-      setCurrentScan(record);
-      setScanLoadError(null);
-      setSource('history');
-      setStatus({ key: 'createdSnapshot', values: { id: record.id } });
+      if (finalScanId && finalScanRecord) {
+        const completedScan = finalScanRecord as ScanRecord;
+        const usage = completedScan.analysis.raw?.usage;
+        const promptFallbackUsed = Boolean(
+          usage &&
+          typeof usage === 'object' &&
+          'promptPhaseReason' in (usage as Record<string, unknown>) &&
+          (usage as Record<string, unknown>).promptPhaseReason,
+        );
+        if (completedScan.analysis.status === 'error') {
+          setStatus({
+            key: 'createdSnapshotWithAnalysisError',
+            values: { id: finalScanId, message: normalizeFailureMessage(locale, 'analysis', completedScan.analysis.reason, completedScan.analysis.message) },
+          });
+        } else if (promptFallbackUsed) {
+          setStatus({ key: 'createdSnapshotWithPromptFallback', values: { id: finalScanId } });
+        } else {
+          setStatus({ key: 'createdSnapshot', values: { id: finalScanId } });
+        }
+      }
+    } catch (error) {
+      setStatus({ key: 'scanFailed', values: { message: messageOf(error) } });
     } finally {
       setIsBusy(false);
     }
@@ -735,7 +859,7 @@ export default function App() {
         body: JSON.stringify(payload),
       });
       setConnectionTest(result);
-      setStatus(result.ok ? { key: 'connectionOk' } : { key: 'connectionFail', values: { message: result.message } });
+      setStatus(result.ok ? { key: 'connectionOk' } : { key: 'connectionFail', values: { message: formatConnectionTestMessage(result, locale) } });
     } finally {
       setIsBusy(false);
     }
@@ -1527,7 +1651,7 @@ export default function App() {
                   <span className={`badge ${connectionTest.ok ? 'low' : connectionTest.status === 'running' ? '' : 'high'}`}>{connectionTest.status}</span>
                   <span>{connectionTest.model || config.model || t('noModelConfigured')}</span>
                 </p>
-                <p>{connectionTest.message}</p>
+                <p>{connectionTest.status === 'running' ? connectionTest.message : formatConnectionTestMessage(connectionTest, locale)}</p>
               </div>
             ) : null}
             <p className="analysis-summary">{t('mandatoryAnalysisHint')}</p>
@@ -1671,8 +1795,39 @@ function analysisMessage(analysis: ScanAnalysis | null, locale: Locale): string 
   if (analysis.status === 'completed') return translate(locale, 'analysisCompleted', { date: formatDate(analysis.generatedAt, locale) });
   if (analysis.status === 'skipped' && analysis.reason === 'disabled') return translate(locale, 'legacyDisabled');
   if (analysis.reason === 'missing_config') return translate(locale, 'analysisMissingConfig');
-  if (analysis.status === 'error') return translate(locale, 'analysisFailed', { message: analysis.message || analysis.reason || 'unknown error' });
+  if (analysis.reason === 'timeout') return translate(locale, 'analysisTimedOut', { seconds: extractTimeoutSeconds(analysis.message) });
+  if (analysis.status === 'error') {
+    return translate(locale, 'analysisFailed', { message: normalizeFailureMessage(locale, 'analysis', analysis.reason, analysis.message) });
+  }
   return translate(locale, 'noAnalysisResult');
+}
+
+function formatConnectionTestMessage(result: ConnectionTestResult, locale: Locale): string {
+  return normalizeFailureMessage(locale, 'connection', result.status, result.message);
+}
+
+function normalizeFailureMessage(
+  locale: Locale,
+  kind: 'analysis' | 'connection',
+  reason: string | undefined,
+  message: string | undefined,
+): string {
+  if (reason === 'timeout' || looksLikeAbortMessage(message)) {
+    const seconds = extractTimeoutSeconds(message);
+    return translate(locale, kind === 'analysis' ? 'analysisTimedOut' : 'connectionTimedOut', { seconds });
+  }
+  return message || reason || 'unknown error';
+}
+
+function looksLikeAbortMessage(message: string | undefined): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return normalized.includes('operation was aborted') || normalized.includes('aborterror');
+}
+
+function extractTimeoutSeconds(message: string | undefined): number {
+  const matched = message?.match(/(\d+(?:\.\d+)?)s/);
+  return matched ? Number(matched[1]) : 20;
 }
 
 function matchHistoryDateRange(generatedAt: string | null | undefined, from: string, to: string): boolean {
@@ -1697,6 +1852,36 @@ async function requestJson<T>(url: string, options: RequestInit = {}): Promise<T
     throw new Error(parsed?.message || parsed?.error || text.trim() || `Request failed with status ${response.status}`);
   }
   return response.json() as Promise<T>;
+}
+
+async function streamJsonLines<T>(url: string, options: RequestInit, onItem: (item: T) => void): Promise<void> {
+  const response = await fetch(url, options);
+  if (!response.ok || !response.body) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text.trim() || `Request failed with status ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      onItem(JSON.parse(trimmed) as T);
+    }
+    if (done) break;
+  }
+
+  const tail = buffer.trim();
+  if (tail) {
+    onItem(JSON.parse(tail) as T);
+  }
 }
 
 async function fetchJson<T>(url: string): Promise<T | null> {
