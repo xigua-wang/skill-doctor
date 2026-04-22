@@ -1,4 +1,4 @@
-import type { AppConfig, AppLocale, ScanAnalysis, ScanRecord, SkillSpotlight } from '../types.ts';
+import type { AppConfig, AppLocale, ConclusionPrompt, ConclusionPromptSet, ScanAnalysis, ScanRecord, SkillSpotlight } from '../types.ts';
 import { compareSkillsForAnalysis, getSkillLocalPriority } from './local-priority.ts';
 
 export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, responseLanguage: AppLocale = 'en'): Promise<ScanAnalysis> {
@@ -52,7 +52,7 @@ export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, 
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content || '{}';
     const parsed = safeParseJson(content);
-    const normalized = normalizeAnalysisOutput(parsed, scan);
+    const normalized = normalizeAnalysisOutput(parsed, scan, responseLanguage);
     return {
       status: 'completed',
       generatedAt: new Date().toISOString(),
@@ -62,6 +62,7 @@ export async function analyzeScanWithModel(scan: ScanRecord, config: AppConfig, 
       findings: normalized.findings,
       recommendations: normalized.recommendations,
       skillSpotlights: normalized.skillSpotlights,
+      conclusionPrompts: normalized.conclusionPrompts,
       raw: {
         usage: data?.usage || null,
       },
@@ -342,6 +343,31 @@ function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: Ap
             rationale: 'It combines the highest local priority with direct command-execution risk, so it has the strongest effect on the workspace safety boundary.',
           },
         ],
+    conclusionPrompts: responseLanguage === 'zh-CN'
+      ? {
+          contentOptimization: {
+            title: 'Skill 内容优化 Prompt',
+            intent: '给另一个模型使用，让它基于扫描结果优化 skill 内容结构与指令质量。',
+            prompt: '你是资深 agent skill 架构师。请根据以下扫描结论，重写高风险和重叠 skill，优化描述、trigger、边界条件、约束、防护和输出格式，并返回修改后的 skill 草案与修改理由。',
+          },
+          priorityOptimization: {
+            title: 'Skill 权重优化 Prompt',
+            intent: '给另一个模型使用，让它基于扫描结果优化 skill 权重、优先级、拆分和合并策略。',
+            prompt: '你是资深 agent skill 架构师。请根据以下扫描结论，判断哪些 skill 应提升、降低、拆分、合并或调整 precedence，减少 trigger 重叠与隐藏覆盖，并返回具体排序建议和依据。',
+          },
+        }
+      : {
+          contentOptimization: {
+            title: 'Skill Content Optimization Prompt',
+            intent: 'Use this with another model to improve the structure and instruction quality of skill content from the scan.',
+            prompt: 'You are a senior agent-skill architect. Use the scan findings below to rewrite risky and overlapping skills, improve descriptions, triggers, boundaries, guardrails, and output contracts, then return revised skill drafts and rationale for each change.',
+          },
+          priorityOptimization: {
+            title: 'Skill Priority Optimization Prompt',
+            intent: 'Use this with another model to optimize skill weighting, precedence, split, and merge decisions from the scan.',
+            prompt: 'You are a senior agent-skill architect. Use the scan findings below to determine which skills should move up, move down, split, merge, or change precedence, reduce trigger overlap and hidden overrides, then return concrete ordering changes with rationale.',
+          },
+        },
   };
 
   return [
@@ -360,9 +386,13 @@ function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: Ap
         'Each spotlight rationale must explain why this skill matters in the context of the workspace, not just repeat its name.',
         'Avoid duplicate findings or recommendations phrased in slightly different words.',
         'Return strict json only.',
-        'json keys must be exactly: summary, findings, recommendations, skillSpotlights.',
+        'Also produce two reusable optimization prompts: one for skill content optimization and one for skill weighting or precedence optimization.',
+        'json keys must be exactly: summary, findings, recommendations, skillSpotlights, conclusionPrompts.',
         'findings and recommendations must be arrays of short strings.',
         'skillSpotlights must be an array of objects with keys skillId, label, rationale.',
+        'conclusionPrompts must be an object with keys contentOptimization and priorityOptimization.',
+        'Each prompt object must have keys title, intent, prompt.',
+        'Each prompt must be a practical multi-step prompt that another model can execute directly.',
         languageInstruction(responseLanguage),
       ].join(' '),
     },
@@ -387,6 +417,7 @@ function buildMessages(scan: ScanRecord, config: AppConfig, responseLanguage: Ap
         '- findings: 2 to 6 concrete findings',
         '- recommendations: 2 to 6 concrete actions',
         '- skillSpotlights: up to 3 items',
+        '- conclusionPrompts: two reusable prompts, one for content optimization and one for priority optimization',
         'When choosing findings and recommendations, emphasize what is highest risk, highest impact, or most likely to create confusing agent behavior.',
         'Do not mention data that is absent from the scan.',
         `Scan payload: ${JSON.stringify(compactScan)}`,
@@ -530,7 +561,7 @@ function countBy<T>(items: T[], keyOf: (item: T) => string) {
   }, {});
 }
 
-function normalizeAnalysisOutput(parsed: Record<string, unknown>, scan: ScanRecord) {
+function normalizeAnalysisOutput(parsed: Record<string, unknown>, scan: ScanRecord, responseLanguage: AppLocale) {
   const validSkillIds = new Set(scan.skills.map((skill) => skill.id));
   const findings = normalizeEvidenceList(parsed.findings, 6);
   const recommendations = normalizeEvidenceList(parsed.recommendations, 6);
@@ -539,6 +570,196 @@ function normalizeAnalysisOutput(parsed: Record<string, unknown>, scan: ScanReco
     findings,
     recommendations,
     skillSpotlights: normalizeSkillSpotlights(parsed.skillSpotlights, validSkillIds),
+    conclusionPrompts: normalizeConclusionPrompts(parsed.conclusionPrompts, scan, findings, recommendations, responseLanguage),
+  };
+}
+
+export function createFallbackConclusionPrompts(
+  scan: ScanRecord,
+  responseLanguage: AppLocale = 'en',
+  analysisInput?: Pick<ScanAnalysis, 'summary' | 'findings' | 'recommendations' | 'skillSpotlights'> | null,
+): ConclusionPromptSet {
+  const topSkills = [...scan.skills]
+    .sort(compareSkillsForAnalysis)
+    .slice(0, 5)
+    .map((skill) => {
+      const priority = getSkillLocalPriority(skill);
+      return {
+        name: skill.name,
+        scope: skill.scope,
+        agent: skill.agent,
+        path: skill.path,
+        triggers: skill.triggers.slice(0, 4),
+        highRiskCount: skill.risks.filter((risk) => risk.severity === 'high').length,
+        issueCount: skill.issues.length,
+        priorityScore: priority.totalScore,
+      };
+    });
+  const conflictSummary = scan.conflicts.slice(0, 5).map((conflict) => ({
+    title: conflict.title,
+    severity: conflict.severity,
+    summary: conflict.summary,
+    suggestedFix: conflict.suggestedFix,
+  }));
+  const chainSummary = scan.resolutionChains.slice(0, 5).map((chain) => ({
+    key: chain.key,
+    winnerSkillId: chain.winnerSkillId,
+    reason: chain.reason,
+    candidates: chain.candidates.map((candidate) => ({
+      name: candidate.name,
+      scope: candidate.scope,
+      agent: candidate.agent,
+    })),
+  }));
+  const spotlightSummary = analysisInput?.skillSpotlights?.slice(0, 3) ?? [];
+  const findings = analysisInput?.findings?.slice(0, 6) ?? [];
+  const recommendations = analysisInput?.recommendations?.slice(0, 6) ?? [];
+  const summary = analysisInput?.summary || normalizeSummary('', scan, findings, recommendations);
+
+  if (responseLanguage === 'zh-CN') {
+    return {
+      contentOptimization: {
+        title: 'Skill 内容优化 Prompt',
+        intent: '将当前扫描结果转成可直接交给模型执行的 skill 内容优化任务。',
+        prompt: [
+          '你是资深 coding-agent skill 架构师。请根据下面这份 skill doctor 扫描结论，产出一份专注于 skill 内容优化的方案。',
+          '目标：',
+          '1. 重写 skill 的 name、description、triggers、边界条件、操作约束、防护规则和输出格式。',
+          '2. 优先修复高风险、触发词模糊、说明不完整、边界不清晰的 skill。',
+          '3. 让 skill 文案更具体、更可执行、更不容易误触发。',
+          '',
+          '请基于以下扫描数据工作，不要虚构仓库外信息：',
+          JSON.stringify({
+            project: scan.project,
+            summary: scan.summary,
+            analysisSummary: summary,
+            findings,
+            recommendations,
+            skillSpotlights: spotlightSummary,
+            topSkills,
+            conflicts: conflictSummary,
+            precedenceChains: chainSummary,
+          }, null, 2),
+          '',
+          '请按以下结构输出：',
+          'A. 内容问题总览：先指出最影响可读性、可执行性和安全边界的 3 个问题。',
+          'B. Skill 内容改写建议：按优先级列出需要重写或补强的 skill，并解释原因。',
+          'C. 修订示例：至少给出 2 个更优的 skill 草案片段，包含 name、description、triggers、关键约束。',
+          'D. 内容设计原则：总结后续编写 skill 时应遵守的规则。',
+          '',
+          '要求：',
+          '- 每条建议必须结合扫描中的风险、冲突、触发词或元数据问题。',
+          '- 输出要偏工程化，不要泛泛而谈。',
+        ].join('\n'),
+      },
+      priorityOptimization: {
+        title: 'Skill 权重优化 Prompt',
+        intent: '将当前扫描结果转成可直接交给模型执行的 skill 权重与优先级优化任务。',
+        prompt: [
+          '你是资深 coding-agent skill 架构师。请根据下面这份 skill doctor 扫描结论，产出一份专注于 skill 权重、优先级、拆分和合并的优化方案。',
+          '目标：',
+          '1. 判断哪些 skill 应提升、降低、拆分、合并或调整 precedence。',
+          '2. 减少 trigger 重叠、跨 scope 隐藏覆盖、以及高风险 skill 获得过高优先级的情况。',
+          '3. 让优先级体系更稳定、更可解释、更符合实际调用意图。',
+          '',
+          '请基于以下扫描数据工作，不要虚构仓库外信息：',
+          JSON.stringify({
+            project: scan.project,
+            summary: scan.summary,
+            analysisSummary: summary,
+            findings,
+            recommendations,
+            skillSpotlights: spotlightSummary,
+            topSkills,
+            conflicts: conflictSummary,
+            precedenceChains: chainSummary,
+          }, null, 2),
+          '',
+          '请按以下结构输出：',
+          'A. 优先级问题总览：先指出最影响稳定性和路由清晰度的 3 个问题。',
+          'B. 权重/优先级调整建议：明确哪些 skill 应上调、下调、拆分或合并，并说明依据。',
+          'C. 冲突修复建议：针对 trigger overlap 和 override 给出优先级层面的处理方案。',
+          'D. 执行顺序：给出建议的调整顺序，优先处理最高风险和最高冲突项。',
+          '',
+          '要求：',
+          '- 如果建议调整优先级，必须明确说明当前排序为什么不合理。',
+          '- 结论必须结合 scope、precedence、风险和冲突解释。',
+          '- 输出要偏工程化，不要泛泛而谈。',
+        ].join('\n'),
+      },
+    };
+  }
+
+  return {
+    contentOptimization: {
+      title: 'Skill Content Optimization Prompt',
+      intent: 'Turn the current scan into an execution-ready prompt for improving skill content quality.',
+      prompt: [
+        'You are a senior coding-agent skill architect. Use the Skill Doctor scan below to produce a content-focused optimization plan.',
+        'Goals:',
+        '1. Rewrite skill names, descriptions, triggers, boundaries, constraints, guardrails, and output contracts.',
+        '2. Prioritize skills that are risky, ambiguous, incomplete, or likely to be triggered incorrectly.',
+        '3. Make skill instructions more explicit, operational, and less error-prone.',
+        '',
+        'Work only from this scan data:',
+        JSON.stringify({
+          project: scan.project,
+          summary: scan.summary,
+          analysisSummary: summary,
+          findings,
+          recommendations,
+          skillSpotlights: spotlightSummary,
+          topSkills,
+          conflicts: conflictSummary,
+          precedenceChains: chainSummary,
+        }, null, 2),
+        '',
+        'Return the result in this structure:',
+        'A. Content problems overview: identify the 3 most important issues harming readability, execution quality, or safety boundaries.',
+        'B. Skill-content changes: list the skills that should be rewritten or strengthened first, with reasons.',
+        'C. Revision examples: provide at least 2 improved skill draft snippets including name, description, triggers, and key guardrails.',
+        'D. Content design rules: summarize the principles that future skills should follow.',
+        '',
+        'Requirements:',
+        '- Tie every recommendation to scan evidence such as risks, conflicts, triggers, or metadata issues.',
+        '- Keep the output operational and engineering-focused, not generic.',
+      ].join('\n'),
+    },
+    priorityOptimization: {
+      title: 'Skill Priority Optimization Prompt',
+      intent: 'Turn the current scan into an execution-ready prompt for improving skill weighting and precedence decisions.',
+      prompt: [
+        'You are a senior coding-agent skill architect. Use the Skill Doctor scan below to produce a priority-focused optimization plan.',
+        'Goals:',
+        '1. Decide which skills should move up, move down, split, merge, or change precedence.',
+        '2. Reduce trigger overlap, cross-scope hidden overrides, and cases where high-risk skills hold excessive priority.',
+        '3. Make the precedence system more stable, explainable, and aligned with actual routing intent.',
+        '',
+        'Work only from this scan data:',
+        JSON.stringify({
+          project: scan.project,
+          summary: scan.summary,
+          analysisSummary: summary,
+          findings,
+          recommendations,
+          skillSpotlights: spotlightSummary,
+          topSkills,
+          conflicts: conflictSummary,
+          precedenceChains: chainSummary,
+        }, null, 2),
+        '',
+        'Return the result in this structure:',
+        'A. Priority problems overview: identify the 3 most important issues harming stability or routing clarity.',
+        'B. Weighting or precedence changes: specify which skills should move up, move down, split, or merge, and explain why.',
+        'C. Conflict-resolution changes: propose precedence-level fixes for trigger overlap and override chains.',
+        'D. Execution order: propose the repair sequence, starting with the highest-risk and highest-conflict items.',
+        '',
+        'Requirements:',
+        '- If you recommend a precedence change, explain why the current ordering is weak.',
+        '- Tie every conclusion to scan evidence such as scope, precedence, risks, and conflicts.',
+        '- Keep the output operational and engineering-focused, not generic.',
+      ].join('\n'),
+    },
   };
 }
 
@@ -597,6 +818,58 @@ function normalizeSkillSpotlight(value: unknown, validSkillIds: Set<string>): Sk
   }
 
   return { skillId, label, rationale };
+}
+
+function normalizeConclusionPrompts(
+  value: unknown,
+  scan: ScanRecord,
+  findings: string[],
+  recommendations: string[],
+  responseLanguage: AppLocale,
+): ConclusionPromptSet {
+  const item = value as Record<string, unknown> | null;
+  const contentPrompt = normalizeConclusionPrompt(item?.contentOptimization);
+  const priorityPrompt = normalizeConclusionPrompt(item?.priorityOptimization);
+
+  if (!contentPrompt || !priorityPrompt) {
+    return createFallbackConclusionPrompts(scan, responseLanguage || detectPromptLanguageFromSet(item), {
+      summary: '',
+      findings,
+      recommendations,
+      skillSpotlights: [],
+    });
+  }
+
+  return {
+    contentOptimization: contentPrompt,
+    priorityOptimization: priorityPrompt,
+  };
+}
+
+function normalizeConclusionPrompt(value: unknown): ConclusionPrompt | null {
+  const item = value as Record<string, unknown> | null;
+  const title = `${item?.title || ''}`.replace(/\s+/g, ' ').trim().slice(0, 120);
+  const intent = `${item?.intent || ''}`.replace(/\s+/g, ' ').trim().slice(0, 240);
+  const prompt = `${item?.prompt || ''}`.trim().slice(0, 6000);
+  if (!title || !intent || prompt.length < 80) return null;
+  return { title, intent, prompt };
+}
+
+function detectPromptLanguage(...values: string[]): AppLocale {
+  return values.some((value) => /[\u4e00-\u9fff]/.test(value)) ? 'zh-CN' : 'en';
+}
+
+function detectPromptLanguageFromSet(value: Record<string, unknown> | null | undefined): AppLocale {
+  const content = value?.contentOptimization as Record<string, unknown> | undefined;
+  const priority = value?.priorityOptimization as Record<string, unknown> | undefined;
+  return detectPromptLanguage(
+    `${content?.title || ''}`,
+    `${content?.intent || ''}`,
+    `${content?.prompt || ''}`,
+    `${priority?.title || ''}`,
+    `${priority?.intent || ''}`,
+    `${priority?.prompt || ''}`,
+  );
 }
 
 function isGenericLowSignalLine(value: string) {

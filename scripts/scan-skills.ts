@@ -70,6 +70,28 @@ function toMarkdown(scan: ScanRecord): string {
     ...(scan.conflicts.length
       ? scan.conflicts.map((conflict) => `- [${conflict.severity}] ${conflict.title}: ${conflict.summary}`)
       : ['- No conflicts found.']),
+    '',
+    '## Conclusion Prompts',
+    '',
+    ...(scan.analysis.conclusionPrompts
+      ? [
+          `### ${scan.analysis.conclusionPrompts.contentOptimization.title}`,
+          '',
+          `Intent: ${scan.analysis.conclusionPrompts.contentOptimization.intent}`,
+          '',
+          '```text',
+          scan.analysis.conclusionPrompts.contentOptimization.prompt,
+          '```',
+          '',
+          `### ${scan.analysis.conclusionPrompts.priorityOptimization.title}`,
+          '',
+          `Intent: ${scan.analysis.conclusionPrompts.priorityOptimization.intent}`,
+          '',
+          '```text',
+          scan.analysis.conclusionPrompts.priorityOptimization.prompt,
+          '```',
+        ]
+      : ['- No conclusion prompts available.']),
   ];
   return `${lines.join('\n')}\n`;
 }

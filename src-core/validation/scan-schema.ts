@@ -174,6 +174,14 @@ function validateAnalysis(value: unknown, label: string, errors: string[]) {
   optionalString(analysis.summary, `${label}.summary`, errors);
   optionalStringArray(analysis.findings, `${label}.findings`, errors);
   optionalStringArray(analysis.recommendations, `${label}.recommendations`, errors);
+  const conclusionPrompts = analysis.conclusionPrompts;
+  if (conclusionPrompts !== undefined) {
+    const promptSet = asObject(conclusionPrompts, `${label}.conclusionPrompts`, errors);
+    if (promptSet) {
+      validateConclusionPrompt(promptSet.contentOptimization, `${label}.conclusionPrompts.contentOptimization`, errors);
+      validateConclusionPrompt(promptSet.priorityOptimization, `${label}.conclusionPrompts.priorityOptimization`, errors);
+    }
+  }
 
   const spotlights = analysis.skillSpotlights;
   if (spotlights !== undefined) {
@@ -188,6 +196,14 @@ function validateAnalysis(value: unknown, label: string, errors: string[]) {
       });
     }
   }
+}
+
+function validateConclusionPrompt(value: unknown, label: string, errors: string[]) {
+  const prompt = asObject(value, label, errors);
+  if (!prompt) return;
+  expectString(prompt.title, `${label}.title`, errors);
+  expectString(prompt.intent, `${label}.intent`, errors);
+  expectString(prompt.prompt, `${label}.prompt`, errors);
 }
 
 function asObject(value: unknown, label: string, errors: string[]): Record<string, unknown> | null {

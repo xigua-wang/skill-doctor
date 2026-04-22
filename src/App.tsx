@@ -81,6 +81,10 @@ const translations = {
     testingConnection: 'Testing model connection…',
     connectionOk: 'Model connection test succeeded.',
     connectionFail: 'Model connection test failed: {message}',
+    copiedPrompt: 'Copied {label} prompt.',
+    copyPromptFailed: 'Failed to copy prompt: {message}',
+    copyAllPrompts: 'Copy all',
+    copiedAllPrompts: 'Copied all prompts.',
     metricSkills: 'skills',
     metricConflicts: 'conflicts',
     metricHighRisk: 'high risk',
@@ -160,6 +164,11 @@ const translations = {
     missing: 'missing',
     findings: 'Findings',
     recommendations: 'Recommendations',
+    conclusionPrompt: 'Conclusion prompt',
+    conclusionPromptIntent: 'Prompt intent',
+    reusableOptimizationPrompts: 'Reusable optimization prompts',
+    contentOptimizationPrompt: 'Content optimization',
+    priorityOptimizationPrompt: 'Priority optimization',
     aiSpotlights: 'AI Spotlights',
     overviewEyebrow: 'Overview',
     workspaceHealth: 'Workspace health',
@@ -239,6 +248,9 @@ const translations = {
     analysisMissingConfig: 'Model analysis is not configured yet. Add apiKey, baseUrl, and model when you want AI-assisted review.',
     analysisFailed: 'Model analysis failed: {message}',
     noAnalysisResult: 'No model analysis result available.',
+    noConclusionPrompt: 'No conclusion prompts are available for this snapshot.',
+    copy: 'Copy',
+    copied: 'Copied',
   },
   'zh-CN': {
     language: '语言',
@@ -266,6 +278,10 @@ const translations = {
     testingConnection: '正在测试模型连接…',
     connectionOk: '模型连接测试成功。',
     connectionFail: '模型连接测试失败：{message}',
+    copiedPrompt: '已复制 {label} prompt。',
+    copyPromptFailed: '复制 prompt 失败：{message}',
+    copyAllPrompts: '全部复制',
+    copiedAllPrompts: '已复制全部 prompts。',
     metricSkills: '技能数',
     metricConflicts: '冲突数',
     metricHighRisk: '高风险',
@@ -345,6 +361,11 @@ const translations = {
     missing: '缺失',
     findings: '发现项',
     recommendations: '建议项',
+    conclusionPrompt: '结论 Prompt',
+    conclusionPromptIntent: 'Prompt 用途',
+    reusableOptimizationPrompts: '可复用优化 Prompts',
+    contentOptimizationPrompt: '内容优化',
+    priorityOptimizationPrompt: '权重优化',
     aiSpotlights: 'AI 聚焦',
     overviewEyebrow: '总览',
     workspaceHealth: '工作区健康度',
@@ -424,6 +445,9 @@ const translations = {
     analysisMissingConfig: '当前还没有配置模型分析；如果你希望获得 AI 辅助审查，请补充 apiKey、baseUrl 和 model。',
     analysisFailed: '模型分析失败：{message}',
     noAnalysisResult: '没有可用的模型分析结果。',
+    noConclusionPrompt: '当前快照没有可用的结论 Prompts。',
+    copy: '复制',
+    copied: '已复制',
   },
 } as const;
 
@@ -454,6 +478,7 @@ export default function App() {
   const [scanTarget, setScanTarget] = useState('.');
   const [isBusy, setIsBusy] = useState(false);
   const [connectionTest, setConnectionTest] = useState<ConnectionTestResult | null>(null);
+  const [copiedPromptKey, setCopiedPromptKey] = useState<'content' | 'priority' | 'all' | null>(null);
   const settingsFormRef = useRef<HTMLFormElement | null>(null);
   const t = (key: TranslationKey, values?: TranslationValues) => translate(locale, key, values);
 
@@ -609,6 +634,11 @@ export default function App() {
     return analysis.skillSpotlights.find((item) => item.skillId === selectedSkill.id) ?? null;
   }, [analysis, selectedSkill]);
 
+  const conclusionPrompts = useMemo(() => {
+    if (analysis?.status !== 'completed') return null;
+    return analysis.conclusionPrompts ?? null;
+  }, [analysis]);
+
   const selectedLocalPriority = useMemo(() => {
     if (!selectedSkill) return null;
     return getSkillLocalPriority(selectedSkill);
@@ -720,6 +750,47 @@ export default function App() {
       setScanTarget(data.currentPath);
     } finally {
       setIsDirectoryLoading(false);
+    }
+  }
+
+  async function handleCopyPrompt(kind: 'content' | 'priority', label: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedPromptKey(kind);
+      setStatus({ key: 'copiedPrompt', values: { label } });
+      window.setTimeout(() => {
+        setCopiedPromptKey((current) => (current === kind ? null : current));
+      }, 1600);
+    } catch (error) {
+      setStatus({ key: 'copyPromptFailed', values: { message: messageOf(error) } });
+    }
+  }
+
+  async function handleCopyAllPrompts() {
+    if (!conclusionPrompts) return;
+    const value = [
+      `${conclusionPrompts.contentOptimization.title}`,
+      `${t('conclusionPromptIntent')}: ${conclusionPrompts.contentOptimization.intent}`,
+      '',
+      conclusionPrompts.contentOptimization.prompt,
+      '',
+      '---',
+      '',
+      `${conclusionPrompts.priorityOptimization.title}`,
+      `${t('conclusionPromptIntent')}: ${conclusionPrompts.priorityOptimization.intent}`,
+      '',
+      conclusionPrompts.priorityOptimization.prompt,
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedPromptKey('all');
+      setStatus({ key: 'copiedAllPrompts' });
+      window.setTimeout(() => {
+        setCopiedPromptKey((current) => (current === 'all' ? null : current));
+      }, 1600);
+    } catch (error) {
+      setStatus({ key: 'copyPromptFailed', values: { message: messageOf(error) } });
     }
   }
 
@@ -1038,6 +1109,68 @@ export default function App() {
               {analysis?.summary ? <p className="analysis-summary">{analysis.summary}</p> : null}
               {analysis?.findings?.length ? <ListBlock title={t('findings')} items={analysis.findings} /> : null}
               {analysis?.recommendations?.length ? <ListBlock title={t('recommendations')} items={analysis.recommendations} /> : null}
+              {conclusionPrompts ? (
+                <div className="prompt-card">
+                  <div className="prompt-card-header">
+                    <h3>{t('reusableOptimizationPrompts')}</h3>
+                    <button
+                      className="button secondary"
+                      type="button"
+                      onClick={() => handleCopyAllPrompts()}
+                    >
+                      {copiedPromptKey === 'all' ? t('copied') : t('copyAllPrompts')}
+                    </button>
+                  </div>
+                  <div className="prompt-dual-grid">
+                    <section className="prompt-section">
+                      <div className="prompt-meta">
+                        <div className="prompt-head">
+                          <div className="prompt-headline">
+                            <span className="badge">{t('contentOptimizationPrompt')}</span>
+                            <strong>{conclusionPrompts.contentOptimization.title}</strong>
+                          </div>
+                          <button
+                            className="button secondary"
+                            type="button"
+                            onClick={() => handleCopyPrompt('content', t('contentOptimizationPrompt'), conclusionPrompts.contentOptimization.prompt)}
+                          >
+                            {copiedPromptKey === 'content' ? t('copied') : t('copy')}
+                          </button>
+                        </div>
+                        <p><strong>{t('conclusionPromptIntent')}:</strong> {conclusionPrompts.contentOptimization.intent}</p>
+                      </div>
+                      <label className="prompt-block">
+                        <span>{t('conclusionPrompt')}</span>
+                        <textarea readOnly value={conclusionPrompts.contentOptimization.prompt} rows={16} />
+                      </label>
+                    </section>
+                    <section className="prompt-section">
+                      <div className="prompt-meta">
+                        <div className="prompt-head">
+                          <div className="prompt-headline">
+                            <span className="badge">{t('priorityOptimizationPrompt')}</span>
+                            <strong>{conclusionPrompts.priorityOptimization.title}</strong>
+                          </div>
+                          <button
+                            className="button secondary"
+                            type="button"
+                            onClick={() => handleCopyPrompt('priority', t('priorityOptimizationPrompt'), conclusionPrompts.priorityOptimization.prompt)}
+                          >
+                            {copiedPromptKey === 'priority' ? t('copied') : t('copy')}
+                          </button>
+                        </div>
+                        <p><strong>{t('conclusionPromptIntent')}:</strong> {conclusionPrompts.priorityOptimization.intent}</p>
+                      </div>
+                      <label className="prompt-block">
+                        <span>{t('conclusionPrompt')}</span>
+                        <textarea readOnly value={conclusionPrompts.priorityOptimization.prompt} rows={16} />
+                      </label>
+                    </section>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">{t('noConclusionPrompt')}</div>
+              )}
               {analysis?.skillSpotlights?.length ? (
                 <div>
                   <h3>{t('aiSpotlights')}</h3>

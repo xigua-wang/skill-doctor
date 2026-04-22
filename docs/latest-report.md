@@ -1,6 +1,6 @@
 # Skill Doctor Report
 
-Generated: 2026-04-17T13:27:55.338Z
+Generated: 2026-04-22T06:59:23.085Z
 Project: /Users/xuzhijie/Desktop/workspace/skill-doctor
 
 ## Summary
@@ -20,3 +20,7 @@ Project: /Users/xuzhijie/Desktop/workspace/skill-doctor
 ## Conflicts
 
 - No conflicts found.
+
+## Conclusion Prompts
+
+- No conclusion prompts available.

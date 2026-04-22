@@ -127,6 +127,17 @@ export interface SkillSpotlight {
   rationale: string;
 }
 
+export interface ConclusionPrompt {
+  title: string;
+  intent: string;
+  prompt: string;
+}
+
+export interface ConclusionPromptSet {
+  contentOptimization: ConclusionPrompt;
+  priorityOptimization: ConclusionPrompt;
+}
+
 export interface ScanAnalysis {
   status: AnalysisStatus;
   generatedAt: string;
@@ -138,6 +149,7 @@ export interface ScanAnalysis {
   findings?: string[];
   recommendations?: string[];
   skillSpotlights?: SkillSpotlight[];
+  conclusionPrompts?: ConclusionPromptSet;
   raw?: {
     usage: unknown;
   };

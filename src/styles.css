@@ -143,6 +143,61 @@ h2, h3, p { margin-top: 0; }
 .analysis-summary { color: var(--text); line-height: 1.7; }
 .analysis-list { display: grid; gap: 8px; }
 .analysis-list p { margin: 0; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); }
+.prompt-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(127, 212, 255, 0.2);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(127, 212, 255, 0.06), rgba(255, 255, 255, 0.02));
+}
+.prompt-card h3,
+.prompt-meta p,
+.prompt-block span { margin: 0; }
+.prompt-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.prompt-meta {
+  display: grid;
+  gap: 8px;
+}
+.prompt-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.prompt-headline {
+  display: grid;
+  gap: 8px;
+}
+.prompt-dual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.prompt-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.prompt-block {
+  display: grid;
+  gap: 10px;
+}
+.prompt-block textarea {
+  min-height: 320px;
+  border-radius: 18px;
+  resize: vertical;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
 .spotlight-list { display: grid; gap: 10px; }
 .spotlight-card {
   display: grid;
@@ -359,6 +414,7 @@ textarea {
   .hero-onboarding { grid-template-columns: 1fr; }
   .form-grid.compact { grid-template-columns: 1fr; }
   .history-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prompt-dual-grid { grid-template-columns: 1fr; }
   .detail-panel { position: static; }
 }
 @media (max-width: 720px) {
@@ -372,6 +428,8 @@ textarea {
   .drawer-panel.left,
   .drawer-panel.right { border-radius: 0; }
   .path-browser-toolbar { grid-template-columns: 1fr; }
+  .prompt-card-header,
+  .prompt-head { flex-direction: column; }
   .priority-grid,
   .history-metrics,
   .metric-grid, .history-row { grid-template-columns: 1fr; }
